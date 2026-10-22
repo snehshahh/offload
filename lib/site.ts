@@ -16,7 +16,7 @@ export const SITE_URL = (() => {
 /** The Offload app (Google Apps Script web app). Set NEXT_PUBLIC_APP_URL when you deploy a new version. */
 export const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
-  "https://script.google.com/macros/s/AKfycbwhsUezPwUCstFRxbQx6MxJ7mNqRL3zTTJYCMcAzV9JHXI9uj83ivAzEzidsr5DwRwp/exec";
+  "https://script.google.com/macros/s/AKfycbyWOVB_xmZ5VivLYiY6_wk1kyqIDwlzB6RDjTzhjxypJreil_V7naw8giFFXvLr4y5oeA/exec";
 
 export const FAQS: { q: string; a: string }[] = [
   {
