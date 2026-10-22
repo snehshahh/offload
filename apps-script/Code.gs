@@ -146,12 +146,12 @@ function listMyFiles(opts) {
 }
 
 /** Request ownership transfer for specific files. Returns { results, remaining } — call again with remaining. */
-function transferFiles(ids, recipient) {
+function transferFiles(ids, recipient, notify) {
   recipient = validateRecipient_(recipient);
   return processIds_(ids, (id, state) => {
     const f = Drive.Files.get(id, { fields: FILE_FIELDS });
     requestTransfer_(state, f);
-  }, { job: 'send', recipient: recipient });
+  }, { job: 'send', recipient: recipient, notify: !!notify });
 }
 
 /* =====================================================================
@@ -205,10 +205,13 @@ function acceptFiles(ids) {
  * Folders section — job loop
  * ===================================================================== */
 
-function startSend(rootIds, recipient) {
+/** notify = true emails the recipient about each item (Google sends one email per file). Off by default. */
+function startSend(rootIds, recipient, notify) {
   recipient = validateRecipient_(recipient);
   requireRoots_(rootIds);
-  return newState_('send', 'send', rootIds, recipient);
+  const state = newState_('send', 'send', rootIds, recipient);
+  state.notify = !!notify;
+  return state;
 }
 
 function startAccept(rootIds) {
@@ -299,7 +302,7 @@ function requestTransfer_(state, f) {
     Drive.Permissions.create(
       { type: 'user', role: 'writer', emailAddress: state.recipient, pendingOwner: true },
       f.id,
-      { sendNotificationEmail: false }
+      { sendNotificationEmail: !!state.notify }
     );
   }
   addItem_(state, f, 'requested', 'To ' + state.recipient);

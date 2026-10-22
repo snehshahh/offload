@@ -59,6 +59,8 @@
   .tab[aria-selected="true"] { background:#fff; color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(29,42,51,.12); }
 
   /* form + buttons */
+  .opt { display:flex; align-items:center; gap:10px; margin-top:16px; font-size:14px; font-weight:500; cursor:pointer; width:fit-content; }
+  .opt-note { margin:4px 0 0 28px !important; }
   label.field { display:block; font-size:13px; font-weight:600; color:var(--ink-2); margin-bottom:6px; }
   input[type=email], input[type=text], input[type=search], select { width:100%; padding:10px 14px; border:1px solid var(--hair); border-radius:var(--radius); font:inherit; font-size:14px; color:var(--ink); background:#fff; transition:border-color .12s, box-shadow .12s; }
   select { width:auto; padding-right:34px; appearance:none; -webkit-appearance:none; cursor:pointer;
@@ -235,6 +237,8 @@
     <label class="field" for="recipient">Send to</label>
     <input type="email" id="recipient" placeholder="Destination Gmail, e.g. name@gmail.com" autocomplete="email">
     <p class="muted" style="margin:8px 0 0">The other account has to accept before anything moves or any space frees up.</p>
+    <label class="opt"><input type="checkbox" class="ck" id="notify"> Email the other account about each transfer</label>
+    <p class="muted opt-note">Google sends one email per file, so this is off by default. The other account can still find everything under "Waiting for you".</p>
   </section>
 
   <!-- FOLDERS -->
@@ -402,7 +406,7 @@
     document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
     setupLists();
     loadChildren('root', $('tree'), 0);
-    $('sendBtn').onclick = () => begin('send', 'sendMsg', r => r.startSend([...selected.keys()], $('recipient').value));
+    $('sendBtn').onclick = () => begin('send', 'sendMsg', r => r.startSend([...selected.keys()], $('recipient').value, $('notify').checked));
     $('scanBtn').onclick = () => begin('scan', 'sendMsg', r => r.startScan([...selected.keys()], 'send', $('recipient').value));
     showTab(MODE === 'inbox' ? 'inbox' : 'folders');
   }
@@ -541,6 +545,7 @@
       if (L.busy || !L.sel.size) return;
       const ids = [...L.sel];
       let recipient = null;
+      const notify = $('notify').checked;
       if (cfg.action === 'send') {
         recipient = $('recipient').value.trim();
         if (!EMAIL_RE.test(recipient)) { say('bad', 'Enter the destination Gmail in "Send to" first.'); $('recipient').focus(); return; }
@@ -563,7 +568,7 @@
           draw();
           say('bad', esc(err.message || err) + ' Select the remaining items and try again; finished ones are skipped.');
         });
-        cfg.action === 'send' ? call.transferFiles(list, recipient) : call.acceptFiles(list);
+        cfg.action === 'send' ? call.transferFiles(list, recipient, notify) : call.acceptFiles(list);
       };
 
       const finish = () => {
