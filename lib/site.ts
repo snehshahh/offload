@@ -1,8 +1,8 @@
 export const SITE_NAME = "Offload";
-export const SITE_TITLE = "Offload: move Google Drive files to your other Google account";
+export const SITE_TITLE = "Offload: Free Google Drive Storage Manager & Bulk Transfer Tool";
 export const SITE_SHORT_TITLE = "Move Google Drive files to your other account";
 export const SITE_DESCRIPTION =
-  "Google storage full? Offload moves folders, large files and photos from one Google account to another in bulk, so the space frees up. Free, nothing to install, and your files never leave Google.";
+  "Free tool to manage Google Drive storage. Bulk move folders, large files and photos to your other Google account and free up storage in minutes. Nothing to install, files never leave Google.";
 
 /** Public address of the site. Set NEXT_PUBLIC_SITE_URL for a custom domain; Vercel's production address is used otherwise. */
 export const SITE_URL = (() => {
@@ -30,6 +30,14 @@ export const FAQS: { q: string; a: string }[] = [
   {
     q: "Why does Google say the app isn't verified?",
     a: "Google shows this for apps that haven't finished its review yet. To continue, choose Advanced, then Go to Offload. Offload needs access to your Drive so it can list your files and hand their ownership to your other account.",
+  },
+  {
+    q: "Can I move Google Drive files to another account in bulk for free?",
+    a: "Yes. Offload is a free bulk transfer tool: pick whole folders, every file over 100 MB, or a screen full of photos, and move them all to your other Google account in one go instead of one file at a time.",
+  },
+  {
+    q: "How do I free up Google storage without deleting anything?",
+    a: "Move files to another Google account you own. Offload transfers ownership, so the files keep existing in your other account and stop counting against the full one. Nothing is deleted, and the structure of your folders is kept.",
   },
   {
     q: "Does the other account have to accept?",
