@@ -2,7 +2,7 @@
 
 Move Google Drive files to your other Google account, and free up storage on the first one.
 
-Pick whole folders, your largest files, or photos and videos, and hand them over in bulk. Photos that live in Google Photos can be copied across too. The receiving account accepts everything in one place. The app is a Google Apps Script web app, so it runs inside your own Google account: no server, no database, nothing leaves Google.
+Pick whole folders, your largest files, or photos and videos, and hand them over in bulk. Photos that live in Google Photos can be copied across too, and the Gmail tab finds emails in bulk and moves them to Trash. The receiving account accepts everything in one place. The app is a Google Apps Script web app, so it runs inside your own Google account: no server, no database, nothing leaves Google.
 
 ## What's here
 
@@ -44,7 +44,7 @@ Setup is needed once per deployment. Until it's done, the tab says so and the re
 
 1. **Use a standard Google Cloud project.** Create one at [console.cloud.google.com](https://console.cloud.google.com), then in Apps Script go to **Project Settings → Google Cloud Platform (GCP) Project → Change project** and enter its project number. Apps Script's default project can't turn on extra APIs.
 2. **Turn on the APIs.** In that project, enable the **Google Photos Picker API** and the **Photos Library API**.
-3. **Consent screen.** Under **Google Auth Platform**, set up the consent screen (External) and add these scopes: `photospicker.mediaitems.readonly`, `photoslibrary.appendonly`, plus the Drive, email and `script.external_request` scopes the app already uses. While the app is in testing, add each Google account that will use it as a test user.
+3. **Consent screen.** Under **Google Auth Platform**, set up the consent screen (External) and add these scopes: `photospicker.mediaitems.readonly`, `photoslibrary.appendonly`, plus the Drive, Gmail (`https://mail.google.com/`), email and `script.external_request` scopes the app already uses. While the app is in testing, add each Google account that will use it as a test user.
 4. **OAuth client for the second account.** Under **Clients**, create a **Web application** client with this authorised redirect URI, where `SCRIPT_ID` is in Apps Script's Project Settings:
 
    ```
@@ -54,6 +54,12 @@ Setup is needed once per deployment. Until it's done, the tab says so and the re
 6. Deploy a new version. Anyone already using the app is asked to approve the new Photos permission once.
 
 How it copies: each photo is downloaded and uploaded in 32 MB pieces, in short calls so the progress bar keeps moving, and up to 2,000 photos can be picked at a time. The browser tab has to stay open while it runs.
+
+## Gmail
+
+The Gmail tab is the former Trash Wizard add-on, rebuilt inside the app. Quick filters (Promotions, Social, Updates, bigger than 10 MB, has attachments, older than a year) and the "Has the words", "Subject contains" and "From" fields build one Gmail search. The tab counts the matches as you type and shows the newest 20. After a two-click confirm it moves them to Trash in batches. Starred and important emails are left alone unless the user unticks that option, and it never trashes more than the number the user confirmed. Nothing is deleted for good: Gmail empties its Trash after 30 days, and the done message links to the Trash for emptying it sooner.
+
+It uses the `https://mail.google.com/` scope, which Google classes as restricted. An unverified app can be used by up to 100 accounts; going past that means Google's restricted-scope verification, including a security assessment.
 
 ## Limits
 

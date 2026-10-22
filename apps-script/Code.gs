@@ -8,6 +8,7 @@
  *   Large files       — list owned files above a size, pick, transfer.        listMyFiles + transferFiles
  *   Photos and videos — list owned images/videos, pick, transfer.              listMyFiles + transferFiles
  *   Waiting for you   — receiver lists everything pending for them, accepts.   listInbox + acceptFiles
+ *   Gmail             — find emails in bulk, then move them to Trash.          gmailPreview + gmailStartTrash/gmailTrashBatch
  *   Google Photos     — copy picked photos into the other account's Google Photos. photosSetup, photosStartPick,
  *                       photosPoll, photosList, photosStartCopy + photosCopyBatch (see that section).
  *
@@ -375,6 +376,94 @@ function transferFolderId_(name, cache) {
   if (!id) id = Drive.Files.create({ name: name, mimeType: FOLDER_MIME, parents: ['root'] }, null, { fields: 'id' }).id;
   cache[name] = id;
   return id;
+}
+
+/* =====================================================================
+ * Gmail — find emails in bulk and move them to Trash
+ *
+ * The search is built from quick filters plus free-text fields, counted, and previewed. Trashing runs in
+ * short slices that always search from the top (trashed mail drops out of the results), never trash
+ * more than the user confirmed, and skip threads already handled in case the search index lags.
+ * Nothing is deleted for good: Gmail empties its Trash after 30 days, or the user does.
+ * ===================================================================== */
+
+const GMAIL_FILTERS = {
+  promotions: 'category:promotions',
+  social: 'category:social',
+  updates: 'category:updates',
+  large: 'larger:10M',
+  attachment: 'has:attachment',
+  old: 'older_than:1y'
+};
+const GMAIL_COUNT_CAP = 10000;
+const GMAIL_PREVIEW = 20;
+const GMAIL_BATCH_MS = 25 * 1000;
+
+/**
+ * f: { filters: [keys of GMAIL_FILTERS], words, subject, from, keepStarred }.
+ * Returns { query, count, capped, items } — items are the newest matching conversations.
+ */
+function gmailPreview(f) {
+  const query = gmailQuery_(f);
+  const start = Date.now();
+  let count = 0, capped = false, first = null, offset = 0;
+  while (true) {
+    const page = GmailApp.search(query, offset, 500);
+    if (!first) first = page;
+    count += page.length;
+    if (page.length < 500) break;
+    if (count >= GMAIL_COUNT_CAP || Date.now() - start > LIST_BUDGET_MS) { capped = true; break; }
+    offset += 500;
+  }
+  const shown = first.slice(0, GMAIL_PREVIEW);
+  const msgs = shown.length ? GmailApp.getMessagesForThreads(shown) : [];
+  const items = shown.map((t, i) => ({
+    id: t.getId(),
+    subject: t.getFirstMessageSubject() || '(no subject)',
+    from: (msgs[i] && msgs[i][0]) ? msgs[i][0].getFrom() : '',
+    date: t.getLastMessageDate().toISOString(),
+    messages: t.getMessageCount()
+  }));
+  return { query: query, count: count, capped: capped, items: items };
+}
+
+/** limit = how many conversations the user confirmed (0 = all matches, when the count was capped). */
+function gmailStartTrash(f, limit) {
+  return { query: gmailQuery_(f), limit: Math.max(0, Number(limit) || 0), trashed: 0, seen: {}, done: false };
+}
+
+/** Move a slice of matching conversations to Trash, then hand the state back to the browser. */
+function gmailTrashBatch(state) {
+  const start = Date.now();
+  let offset = 0;
+  while (Date.now() - start < GMAIL_BATCH_MS) {
+    const left = state.limit ? state.limit - state.trashed : 100;
+    if (left <= 0) { state.done = true; break; }
+    const threads = GmailApp.search(state.query, offset, 100);
+    if (!threads.length) { state.done = true; break; }
+    const fresh = threads.filter(t => !state.seen[t.getId()]).slice(0, left);
+    if (!fresh.length) { offset += threads.length; continue; } // search hasn't caught up yet: look further down
+    GmailApp.moveThreadsToTrash(fresh);
+    fresh.forEach(t => { state.seen[t.getId()] = 1; });
+    state.trashed += fresh.length;
+    offset = 0;
+  }
+  return state;
+}
+
+function gmailQuery_(f) {
+  f = f || {};
+  const parts = [];
+  (f.filters || []).forEach(k => { if (GMAIL_FILTERS[k]) parts.push(GMAIL_FILTERS[k]); });
+  const from = String(f.from || '').replace(/[()"]/g, ' ').trim();
+  if (from) parts.push('from:(' + from + ')');
+  const subject = String(f.subject || '').replace(/"/g, ' ').trim();
+  if (subject) parts.push('subject:("' + subject + '")');
+  const words = String(f.words || '').trim();
+  if (words) parts.push(words);
+  if (!parts.length) throw new Error('Pick a quick filter or type something to search for.');
+  if (f.keepStarred !== false) parts.push('-is:starred -is:important');
+  return parts.join(' ');
 }
 
 /* =====================================================================

@@ -52,6 +52,10 @@ export const FAQS: { q: string; a: string }[] = [
     a: "Yes, as a copy. Google Photos has no way to hand photos to another account, so Offload copies the ones you pick, up to 2,000 at a time, into your other account's Google Photos and gathers them in an album. Your originals stay where they are: delete them once you've checked the copies, and that frees the space. Some very large videos may not copy.",
   },
   {
+    q: "Can it clean up Gmail too?",
+    a: "Yes. The Gmail tab finds emails in bulk with quick filters like Promotions, bigger than 10 MB or older than a year, or by words, subject and sender. It shows how many match, then moves them to Trash once you confirm. Starred and important emails are left alone by default, and anything trashed can be restored for 30 days.",
+  },
+  {
     q: "Does it work with work or school accounts?",
     a: "Usually not. Most organisations block ownership transfers outside their domain. Offload is made for personal Gmail accounts.",
   },

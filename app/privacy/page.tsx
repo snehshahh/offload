@@ -3,7 +3,7 @@ import { Header, Footer } from "@/components/Chrome";
 
 export const metadata: Metadata = {
   title: "Privacy",
-  description: "How Offload handles your Google Drive data: it runs inside your own Google account, stores nothing, and your files never leave Google.",
+  description: "How Offload handles your Google Drive, Gmail and Google Photos data: it runs inside your own Google account, has no server of its own, and your files never leave Google.",
   alternates: { canonical: "/privacy" },
   openGraph: { url: "/privacy", title: "Privacy | Offload" },
 };
@@ -29,6 +29,11 @@ export default function Privacy() {
             Offload asks for access to your Google Drive so it can list your folders and files, show their sizes and your storage
             use, and create or accept the ownership transfers you choose. It also reads your email address to show which account
             you&rsquo;re signed in with.
+          </p>
+          <p>
+            It asks for access to your Gmail so the Gmail tab can search your mail, show the count and the subject, sender and
+            date of the newest matches, and move the emails you confirm to Trash. It doesn&rsquo;t read, keep or send the content
+            of your emails.
           </p>
           <p>
             If you use the Google Photos tab, it also opens Google&rsquo;s photo picker, which lets it read only the photos and
@@ -58,6 +63,11 @@ export default function Privacy() {
             On the Google Photos tab, it copies the photos and videos you pick into your other account and puts them in an album
             called &ldquo;Copied from&rdquo; plus your email. It never deletes photos; you do that yourself once you&rsquo;ve
             checked the copies.
+          </p>
+          <p>
+            On the Gmail tab, it moves the conversations you confirm to Gmail&rsquo;s Trash, leaving starred and important ones
+            alone unless you say otherwise. It never deletes email for good: Gmail does that after 30 days, or you do it by
+            emptying the Trash.
           </p>
 
           <h2>Removing access</h2>

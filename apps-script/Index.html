@@ -225,6 +225,20 @@
   .gst.bad { background:var(--red); }
   .gst.busy { background:rgba(29,42,51,.72); }
   .gst.busy::before { content:""; width:10px; height:10px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .9s linear infinite; }
+  /* Gmail */
+  .gm-chips { margin:0 0 16px; }
+  .chip[aria-pressed="true"] { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .gm-fields { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; }
+  .gm-fields label.field { margin:0; }
+  .gm-fields input { margin-top:6px; font-weight:400; }
+  .gm-q { margin:12px 0 0; word-break:break-word; }
+  .gm-res { margin-top:16px; }
+  .gm-res .flist { max-height:380px; }
+  .gm-res .actionbar .actions { margin:0; }
+  .btn-danger { background:var(--red); color:#fff; }
+  .btn-danger:hover { background:#8E322C; }
+  .note a.btn-quiet, .note a.btn-main { text-decoration:none; }
+
   @media (max-width:560px) {
     .wrap { padding-top:24px; }
     h1 { font-size:24px; }
@@ -302,6 +316,7 @@
     <button class="tab" role="tab" data-tab="large">Large files</button>
     <button class="tab" role="tab" data-tab="media">Photos in Drive</button>
     <button class="tab" role="tab" data-tab="gphotos">Google Photos</button>
+    <button class="tab" role="tab" data-tab="gmail">Gmail</button>
     <button class="tab" role="tab" data-tab="inbox">Waiting for you</button>
   </nav>
 
@@ -333,6 +348,7 @@
   <section class="panel hidden" id="view-large"></section>
   <section class="panel hidden" id="view-media"></section>
   <section class="panel hidden" id="view-gphotos"></section>
+  <section class="panel hidden" id="view-gmail"></section>
   <section class="panel hidden" id="view-inbox"></section>
 
   <!-- ACCEPT LINK MODE -->
@@ -382,7 +398,8 @@
   const ICON_FILE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v11.5A1.5 1.5 0 0 1 17.5 21h-10A1.5 1.5 0 0 1 6 19.5v-15A1.5 1.5 0 0 1 7.5 3Z"/><path d="M14 3v5h5"/></svg>';
   const ICON_IMAGE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/></svg>';
   const ICON_VIDEO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/></svg>';
-  const ICON_CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+  const ICON_MAIL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg>';
+  const ICON_CHEVRON ='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
   const ICON_X = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 
   const STATUS = {
@@ -484,8 +501,8 @@
   function showTab(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-    ['folders', 'large', 'media', 'gphotos', 'inbox'].forEach(t => $('view-' + t).classList.toggle('hidden', t !== tab));
-    $('sendTo').classList.toggle('hidden', tab === 'inbox' || tab === 'gphotos');
+    ['folders', 'large', 'media', 'gphotos', 'gmail', 'inbox'].forEach(t => $('view-' + t).classList.toggle('hidden', t !== tab));
+    $('sendTo').classList.toggle('hidden', ['inbox', 'gphotos', 'gmail'].indexOf(tab) !== -1);
     $('results').classList.toggle('hidden', !(tab === 'folders' && resultsUsed));
     if (lists[tab]) lists[tab].activate();
   }
@@ -502,6 +519,7 @@
     document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
     setupLists();
     lists.gphotos = makeGooglePhotos();
+    lists.gmail = makeGmail();
     loadChildren('root', $('tree'), 0);
     $('sendBtn').onclick = () => begin('send', 'sendMsg', r => r.startSend([...selected.keys()], $('recipient').value, $('notify').checked));
     $('scanBtn').onclick = () => begin('scan', 'sendMsg', r => r.startScan([...selected.keys()], 'send', $('recipient').value));
@@ -1121,6 +1139,172 @@
         else if (G.phase === 'connect' || G.phase === 'pick') refreshSetup();
       }
     };
+  }
+
+  /* =========================== Gmail =========================== */
+  // Searches as you type or tap a filter, shows the count and the newest matches, then trashes on a
+  // two-click confirm. Nothing is deleted for good: it all goes to Gmail's Trash.
+  function makeGmail() {
+    const root = $('view-gmail');
+    const FILTERS = [
+      ['promotions', 'Promotions'], ['social', 'Social'], ['updates', 'Updates'],
+      ['large', 'Bigger than 10 MB'], ['attachment', 'Has attachments'], ['old', 'Older than a year']
+    ];
+    const field = (key, label, hint) => '<label class="field">' + label + '<input type="text" data-in="' + key + '" placeholder="' + hint + '" autocomplete="off"></label>';
+    root.innerHTML =
+      '<h2>Clean up Gmail</h2>' +
+      '<p class="lede">Find emails in bulk and move them to Trash. Big attachments and old promotions are usually what fill Gmail up. Tap a filter or type, and the count updates as you go.</p>' +
+      '<div class="chips gm-chips">' + FILTERS.map(([k, label]) => '<button type="button" class="chip" data-f="' + k + '" aria-pressed="false">' + label + '</button>').join('') + '</div>' +
+      '<div class="gm-fields">' + field('words', 'Has the words', 'e.g. sale, newsletter') + field('subject', 'Subject contains', 'e.g. Your order') + field('from', 'From', 'e.g. deals@shop.com') + '</div>' +
+      '<label class="opt"><input type="checkbox" class="ck" data-in="keep" checked> Leave starred and important emails alone</label>' +
+      '<div class="gm-res" data-res></div>' +
+      '<div data-msg></div>';
+
+    const el = sel => root.querySelector(sel);
+    const M = { started: false, seq: 0, loading: false, res: null, confirm: false, running: false, job: null };
+    const fmtN = n => Number(n).toLocaleString();
+    const mailUrl = hash => 'https://mail.google.com/mail/u/?authuser=' + encodeURIComponent($('me').textContent) + '#' + hash;
+
+    function fields() {
+      return {
+        filters: [...root.querySelectorAll('[data-f][aria-pressed="true"]')].map(b => b.dataset.f),
+        words: el('[data-in=words]').value.trim(),
+        subject: el('[data-in=subject]').value.trim(),
+        from: el('[data-in=from]').value.trim(),
+        keepStarred: el('[data-in=keep]').checked
+      };
+    }
+    const hasCriteria = f => !!(f.filters.length || f.words || f.subject || f.from);
+
+    // ---- searching (debounced, stale responses ignored) ----
+    function search() {
+      if (M.running) return;
+      const f = fields();
+      const my = ++M.seq;
+      M.confirm = false;
+      if (!hasCriteria(f)) { M.res = null; M.loading = false; render(); return; }
+      M.loading = true;
+      render();
+      run().withSuccessHandler(r => {
+        if (my !== M.seq) return;
+        M.loading = false;
+        M.res = r;
+        render();
+      }).withFailureHandler(err => {
+        if (my !== M.seq) return;
+        M.loading = false;
+        M.res = null;
+        render();
+        say('bad', esc(err.message || err));
+      }).gmailPreview(f);
+    }
+    const research = debounce(search, 600);
+
+    root.addEventListener('input', e => { if (e.target.matches('[data-in]')) research(); });
+    root.addEventListener('change', e => { if (e.target.matches('[data-in=keep]')) search(); });
+    root.addEventListener('click', e => {
+      const chip = e.target.closest('[data-f]');
+      if (chip) {
+        if (M.running) return;
+        chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true'));
+        research();
+        return;
+      }
+      const act = e.target.closest('[data-act]');
+      if (!act) return;
+      if (act.dataset.act === 'ask') { M.confirm = true; render(); }
+      else if (act.dataset.act === 'cancel') { M.confirm = false; render(); }
+      else if (act.dataset.act === 'go') trash();
+    });
+
+    // ---- trashing ----
+    function trash() {
+      if (M.running || !M.res || !M.res.count) return;
+      M.running = true; anyBusy++;
+      M.confirm = false;
+      say('', '');
+      const limit = M.res.capped ? 0 : M.res.count;
+      M.job = { trashed: 0, limit: limit };
+      render();
+      run().withSuccessHandler(loop).withFailureHandler(stop).gmailStartTrash(fields(), limit);
+    }
+
+    function loop(state) {
+      M.job = state;
+      render();
+      if (state.done) return finish();
+      run().withSuccessHandler(loop).withFailureHandler(stop).gmailTrashBatch(state);
+    }
+
+    function stop(err) {
+      M.running = false; anyBusy--;
+      const moved = M.job ? M.job.trashed : 0;
+      say('bad', esc(err.message || err) + (moved ? ' ' + fmtN(moved) + ' conversation(s) were moved to Trash before it stopped.' : '') + ' Select "Move to Trash" again to carry on.');
+      search();
+    }
+
+    function finish() {
+      M.running = false; anyBusy--;
+      const n = M.job.trashed;
+      say('good', 'Moved <b>' + fmtN(n) + '</b> conversation' + (n === 1 ? '' : 's') + ' to Trash. They keep using space until Gmail deletes them for good after 30 days, and you can restore any of them until then.' +
+        '<div class="actions"><a class="btn btn-main" href="' + esc(mailUrl('trash')) + '" target="_blank" rel="noopener">Empty the Trash in Gmail</a></div>' +
+        '<span class="muted">Emptying the Trash frees the space now. It can\'t be undone.</span>');
+      loadStorage();
+      search();
+    }
+
+    // ---- drawing ----
+    function render() {
+      root.querySelectorAll('[data-f], [data-in]').forEach(c => { c.disabled = M.running; });
+      root.classList.toggle('is-running', M.running || (M.loading && !!M.res));
+      const box = el('[data-res]');
+      const r = M.res;
+
+      if (M.running) {
+        const j = M.job, total = j.limit || (r ? r.count : 0);
+        const pct = total ? Math.min(100, Math.max(2, j.trashed / total * 100)) : 2;
+        box.innerHTML = '<div class="progress"><span style="width:' + pct + '%"></span></div>' +
+          '<p><span class="spinner"></span>Moved <b>' + fmtN(j.trashed) + '</b>' + (j.limit ? ' of ' + fmtN(j.limit) : '') + ' to Trash. Keep this tab open.</p>';
+        return;
+      }
+      if (!r) {
+        box.innerHTML = M.loading ? '<p class="muted"><span class="spinner"></span>Searching Gmail…</p>'
+          : '<p class="muted">Pick a quick filter or type something above to see how many emails match.</p>';
+        return;
+      }
+
+      const n = fmtN(r.count) + (r.capped ? '+' : '');
+      let h = '<div class="listhead"><span><b>' + n + '</b> conversation' + (r.count === 1 ? '' : 's') + ' match' + (r.count === 1 ? 'es' : '') +
+        (M.loading ? ' <span class="spinner" style="margin-left:6px"></span>' : '') + '</span>' +
+        '<a class="muted" href="' + esc(mailUrl('search/' + encodeURIComponent(r.query))) + '" target="_blank" rel="noopener">See them in Gmail</a></div>';
+      if (r.count) {
+        h += '<div class="flist">' + r.items.map(rowHtml).join('') + '</div>';
+        if (r.count > r.items.length) h += '<p class="muted">Showing the newest ' + r.items.length + '.</p>';
+        h += '<p class="muted gm-q">Gmail search: <code>' + esc(r.query) + '</code></p>';
+        h += M.confirm
+          ? '<div class="actionbar"><div class="selinfo"><b>Move ' + n + ' conversation' + (r.count === 1 ? '' : 's') + ' to Trash?</b></div>' +
+            '<div class="actions"><button class="btn btn-quiet" data-act="cancel">Cancel</button><button class="btn btn-danger" data-act="go">Yes, move to Trash</button></div></div>'
+          : '<div class="actionbar"><div class="selinfo">They go to Gmail\'s Trash, where you can restore them for 30 days.</div>' +
+            '<button class="btn btn-main" data-act="ask"' + (M.loading ? ' disabled' : '') + '>Move ' + n + ' to Trash</button></div>';
+      } else {
+        h += '<div class="flist"><div class="empty">Nothing matches. Try fewer filters' + (fields().keepStarred ? ', or untick "Leave starred and important emails alone"' : '') + '.</div></div>';
+      }
+      box.innerHTML = h;
+    }
+
+    function rowHtml(it) {
+      const from = String(it.from || '').replace(/<[^>]*>/, '').replace(/"/g, '').trim() || it.from;
+      return '<div class="frow is-done"><span class="thumb">' + ICON_MAIL + '</span>' +
+        '<span class="fmain"><span class="fname" title="' + esc(it.subject) + '">' + esc(it.subject) + '</span>' +
+        '<span class="fsub"><span>' + esc(from) + '</span><span>' + esc(fmtDate(it.date)) + '</span>' +
+        (it.messages > 1 ? '<span>' + it.messages + ' messages</span>' : '') + '</span></span></div>';
+    }
+
+    function say(kind, html) {
+      el('[data-msg]').innerHTML = html ? '<div class="note ' + kind + '">' + html + '</div>' : '';
+    }
+
+    return { activate: () => { if (!M.started) { M.started = true; render(); } } };
   }
 
   function copyText(input, btn) {
