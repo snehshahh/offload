@@ -94,9 +94,31 @@ h3 { font-size:19px; margin:0 0 6px; letter-spacing:-0.01em; line-height:1.3; }
 .steps .n { flex:none; width:38px; height:38px; border-radius:50%; background:var(--teal); color:#fff; display:grid; place-items:center; font-weight:700; }
 .steps p, .feat p, .trust p { margin:0; color:var(--ink-2); font-size:16px; }
 
-.features { display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; }
+.features { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
 .feat { background:var(--surface); border-radius:20px; padding:26px 24px; }
 .feat svg { color:var(--teal); margin-bottom:14px; }
+
+.gmail-block { display:grid; grid-template-columns:1fr 1.02fr; gap:56px; align-items:center; }
+.gmail-block h2 { margin-bottom:16px; }
+.gmail-block .lede { margin:0 0 26px; }
+.gdemo { background:var(--surface); border-radius:24px; padding:20px 18px 16px; box-shadow:0 30px 60px -32px rgba(29,42,51,.35); font-size:15px; }
+.gchips { display:flex; flex-wrap:wrap; gap:6px; margin:4px 4px 14px; }
+.gchip { border:1px solid var(--hair); background:#fff; color:var(--ink-2); border-radius:999px; padding:6px 13px; font:inherit; font-size:14px; cursor:pointer; transition:background .15s, color .15s, border-color .15s; }
+.gchip:hover { background:var(--hover); }
+.gchip[aria-pressed="true"] { background:var(--ink); border-color:var(--ink); color:#fff; }
+.gcount { margin:0 4px 8px; color:var(--ink-2); }
+.gcount b { color:var(--ink); font-size:20px; font-variant-numeric:tabular-nums; }
+.glist { list-style:none; margin:0; padding:0; }
+.glist li { display:flex; align-items:center; gap:12px; min-height:52px; padding:4px 10px; border-radius:10px; }
+.glist li + li { border-top:1px solid var(--slate-soft); }
+.gmain { flex:1; min-width:0; display:flex; flex-direction:column; }
+.gsub { font-size:13px; color:var(--muted); }
+.gactions { display:flex; gap:8px; flex-wrap:wrap; }
+.gdone { margin:0 4px; padding:14px 16px; border-radius:14px; background:var(--teal-soft); color:var(--teal-deep); animation:faq-in .25s ease both; }
+.gdone .gactions { margin-top:12px; }
+.btn-danger { background:var(--red); color:#fff; }
+.btn-danger:hover { background:#9A3630; }
+.btn:disabled { opacity:.45; cursor:default; }
 
 .privacy-block { display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
 .privacy-block h2 { margin-bottom:16px; }
@@ -146,7 +168,7 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
 @media (max-width:900px) {
   .hero { grid-template-columns:1fr; gap:40px; padding-top:20px; }
   .steps { grid-template-columns:1fr; gap:28px; }
-  .privacy-block { grid-template-columns:1fr; gap:28px; }
+  .privacy-block, .gmail-block { grid-template-columns:1fr; gap:28px; }
   .faq-block { grid-template-columns:1fr; gap:24px; }
   .faq-side { position:static; }
   .band { grid-template-columns:1fr; gap:22px; padding:40px 32px; }

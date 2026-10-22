@@ -10,6 +10,7 @@ export function Header() {
       </Link>
       <nav className="top-nav" aria-label="Main">
         <a href="/#how">How it works</a>
+        <a href="/#gmail">Gmail cleanup</a>
         <a href="/#faq">Questions</a>
         <a className="btn btn-main" href={APP_URL}>
           Open Offload
@@ -27,6 +28,7 @@ export function Footer() {
         <nav aria-label="Footer">
           <Link href="/">Home</Link>
           <a href="/#how">How it works</a>
+          <a href="/#gmail">Gmail cleanup</a>
           <a href="/#faq">Questions</a>
           <Link href="/privacy">Privacy</Link>
           <a href={APP_URL}>Open Offload</a>

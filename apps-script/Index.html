@@ -996,7 +996,7 @@
 
       let s1;
       if (!S) s1 = '<p class="muted"><span class="spinner"></span>Checking…</p>';
-      else if (!S.configured) s1 = '<p class="muted">Copying from Google Photos needs a one-time setup by whoever deployed this copy of Offload. The README explains it under "Google Photos".</p>';
+      else if (!S.configured) s1 = '<div class="note warn"><b>Not switched on yet.</b> Copying from Google Photos needs a one-time setup by whoever deployed this copy of Offload: a Google Cloud project with the Photos APIs, and the script properties <code>PHOTOS_CLIENT_ID</code> and <code>PHOTOS_CLIENT_SECRET</code>. The README explains it under "Google Photos".</div>';
       else if (S.dest) s1 = '<div class="acct"><span class="avatar sm">' + esc(S.dest.charAt(0).toUpperCase()) + '</span><b>' + esc(S.dest) + '</b>' +
         (G.running || ph === 'picking' ? '' : '<button class="btn btn-quiet btn-small" data-do="change">Change</button>') + '</div>' +
         '<p class="muted" style="margin-top:6px">Offload can only add photos there. It can\'t see or change anything already in that account.</p>';
@@ -1035,7 +1035,7 @@
       const state = n => {
         const done = n === 1 ? !!(S && S.dest) : n === 2 ? after : ph === 'done';
         const active = n === 1 ? ph === 'connect' : n === 2 ? (ph === 'pick' || ph === 'picking') : (ph === 'copying' || ph === 'stopped');
-        return done && !active ? 'is-done' : active ? 'is-active' : (n === 1 && S && !S.configured) || n > 1 ? 'is-off' : '';
+        return done && !active ? 'is-done' : active ? 'is-active' : n > 1 ? 'is-off' : '';
       };
       root.querySelectorAll('.step').forEach(li => { li.className = 'step ' + state(Number(li.dataset.step)); });
 

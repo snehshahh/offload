@@ -1,5 +1,6 @@
 import { Header, Footer } from "@/components/Chrome";
 import { HeroDemo } from "@/components/HeroDemo";
+import { GmailDemo } from "@/components/GmailDemo";
 import { APP_URL, FAQS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const jsonLd = {
@@ -32,6 +33,8 @@ const jsonLd = {
         "Transfer ownership of whole Google Drive folders, including subfolders",
         "Find and move files larger than 100 MB",
         "Move photos and videos stored in Google Drive",
+        "Copy Google Photos to another Google account",
+        "Bulk delete Gmail emails by category, size, age, sender or subject",
         "Accept all incoming transfers at once",
         "See folder sizes and storage use",
       ],
@@ -80,6 +83,16 @@ const FEATURES = [
     body: "The receiving account sees everything waiting for it and takes it all with a single click.",
     icon: "M4 13h4l2 3h4l2-3h4M5.5 5h13L21 13v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5l2.5-8Z",
   },
+  {
+    title: "Gmail cleanup",
+    body: "Find old promotions, social updates and emails with big attachments, and move thousands to Trash at once.",
+    icon: "M4 7h16M10 11v6M14 11v6M9 7V4h6v3M6 7l1 13h10l1-13",
+  },
+  {
+    title: "Google Photos too",
+    body: "Copy the photos you pick into your other account's Google Photos, then delete the originals to free the space.",
+    icon: "M8 8h11a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM4 16V5a1 1 0 0 1 1-1h11",
+  },
 ];
 
 export default function Home() {
@@ -96,7 +109,8 @@ export default function Home() {
               <h1 id="hero-title">Move Google Drive files to your other account</h1>
               <p className="lede">
                 Google storage full? Offload bulk moves your folders, large files and photos to another Google account you
-                own, so you can manage your free storage across both. The space frees up as soon as the other account accepts.
+                own, and clears out Gmail in bulk, so you can manage your free storage across both. The space frees up as soon
+                as the other account accepts.
               </p>
               <div className="cta">
                 <a className="btn btn-main btn-lg" href={APP_URL}>
@@ -148,12 +162,38 @@ export default function Home() {
             </div>
           </section>
 
+          <section id="gmail" className="block gmail-block" aria-labelledby="gmail-title">
+            <div>
+              <h2 id="gmail-title">Clean up Gmail in bulk</h2>
+              <p className="lede">
+                Old promotions, newsletters and emails with big attachments fill the same storage as your Drive. Pick a filter,
+                see how many emails match, and move them all to Trash at once instead of a page at a time.
+              </p>
+              <ul className="trust">
+                <li>
+                  <h3>Quick filters</h3>
+                  <p>Promotions, Social, Updates, bigger than 10 MB, older than a year, or your own words, subject and sender.</p>
+                </li>
+                <li>
+                  <h3>See before you trash</h3>
+                  <p>The count and the newest matches update as you type, with a link to the same search in Gmail.</p>
+                </li>
+                <li>
+                  <h3>Safe by default</h3>
+                  <p>Starred and important emails are left alone, and everything goes to Trash, where you can restore it for 30 days.</p>
+                </li>
+              </ul>
+            </div>
+            <GmailDemo />
+          </section>
+
           <section className="block privacy-block" aria-labelledby="privacy-title">
             <div>
               <h2 id="privacy-title">Your files never leave Google</h2>
               <p className="lede">
-                Offload doesn&rsquo;t copy, upload or store anything. It asks Google Drive to change who owns your files, the same
-                thing you could do one file at a time in Drive&rsquo;s share settings, just thousands at once.
+                Offload has no server and stores none of your files. For Drive it asks Google to change who owns your files, the
+                same thing you could do one file at a time in Drive&rsquo;s share settings, just thousands at once. Gmail cleanup
+                and Google Photos copies happen inside Google too.
               </p>
             </div>
             <ul className="trust">
