@@ -189,6 +189,42 @@
   .t-grey  { background:var(--slate-soft); color:#56636D; }
   .t-red   { background:var(--red-soft); color:var(--red); }
 
+  /* Google Photos */
+  a.btn { display:inline-block; text-decoration:none; }
+  .note.warn { background:var(--amber-soft); color:var(--ink-2); }
+  .note.warn b { color:var(--ink); }
+  .note ol, .note ul { margin:8px 0; padding-left:20px; }
+  .note li { margin-top:4px; }
+  .note .actions { margin-top:12px; }
+  .note a.btn-main { color:#fff; }
+  .note a.btn-quiet { color:var(--ink); }
+  .steps { list-style:none; margin:0; padding:0; }
+  .step { display:flex; gap:14px; padding:16px 0; border-top:1px solid var(--slate-soft); }
+  .step:first-child { border-top:0; padding-top:4px; }
+  .step-n { flex:none; width:28px; height:28px; border-radius:50%; background:var(--slate-soft); color:var(--ink-2); display:grid; place-items:center; font-weight:700; font-size:13px; transition:background .2s, color .2s; }
+  .step.is-active .step-n { background:var(--teal); color:#fff; }
+  .step.is-done .step-n { background:var(--teal-soft); color:var(--teal-deep); }
+  .step.is-off .step-body { opacity:.5; }
+  .step-body { flex:1; min-width:0; padding-top:3px; }
+  .step-title { font-weight:600; margin-bottom:2px; }
+  .step-body p { margin:0; }
+  .step-body .actions { margin-top:10px; }
+  .acct { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:4px; }
+  .avatar.sm { width:26px; height:26px; font-size:12px; background:#5B7F9A; }
+  .progress { height:8px; border-radius:999px; background:var(--slate-soft); overflow:hidden; margin:10px 0 8px; }
+  .progress span { display:block; height:100%; width:0; background:var(--teal); border-radius:999px; transition:width .5s ease; }
+  .gp-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin:18px 0 8px; }
+  .gp-head h3 { font-size:15px; font-weight:600; margin:0; }
+  .tile.static { cursor:default; }
+  .tile.static:hover { transform:none; background:transparent; }
+  .tile .thumb img { transition:opacity .4s, transform .35s cubic-bezier(.2,.8,.2,1); }
+  .tile.is-queued .thumb img { opacity:.5; }
+  .tile.is-failed .thumb { box-shadow:0 0 0 2px var(--red); }
+  .gst { position:absolute; right:6px; bottom:6px; z-index:1; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; color:#fff; font-size:12px; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .gst.ok { background:var(--teal); animation:tick .3s ease; }
+  .gst.bad { background:var(--red); }
+  .gst.busy { background:rgba(29,42,51,.72); }
+  .gst.busy::before { content:""; width:10px; height:10px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .9s linear infinite; }
   @media (max-width:560px) {
     .wrap { padding-top:24px; }
     h1 { font-size:24px; }
@@ -264,7 +300,8 @@
   <nav class="tabs hidden" id="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="folders">Folders</button>
     <button class="tab" role="tab" data-tab="large">Large files</button>
-    <button class="tab" role="tab" data-tab="media">Photos and videos</button>
+    <button class="tab" role="tab" data-tab="media">Photos in Drive</button>
+    <button class="tab" role="tab" data-tab="gphotos">Google Photos</button>
     <button class="tab" role="tab" data-tab="inbox">Waiting for you</button>
   </nav>
 
@@ -295,6 +332,7 @@
   <!-- LARGE FILES / PHOTOS / INBOX (built by script) -->
   <section class="panel hidden" id="view-large"></section>
   <section class="panel hidden" id="view-media"></section>
+  <section class="panel hidden" id="view-gphotos"></section>
   <section class="panel hidden" id="view-inbox"></section>
 
   <!-- ACCEPT LINK MODE -->
@@ -446,8 +484,8 @@
   function showTab(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-    ['folders', 'large', 'media', 'inbox'].forEach(t => $('view-' + t).classList.toggle('hidden', t !== tab));
-    $('sendTo').classList.toggle('hidden', tab === 'inbox');
+    ['folders', 'large', 'media', 'gphotos', 'inbox'].forEach(t => $('view-' + t).classList.toggle('hidden', t !== tab));
+    $('sendTo').classList.toggle('hidden', tab === 'inbox' || tab === 'gphotos');
     $('results').classList.toggle('hidden', !(tab === 'folders' && resultsUsed));
     if (lists[tab]) lists[tab].activate();
   }
@@ -463,6 +501,7 @@
     $('tabs').classList.remove('hidden');
     document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
     setupLists();
+    lists.gphotos = makeGooglePhotos();
     loadChildren('root', $('tree'), 0);
     $('sendBtn').onclick = () => begin('send', 'sendMsg', r => r.startSend([...selected.keys()], $('recipient').value, $('notify').checked));
     $('scanBtn').onclick = () => begin('scan', 'sendMsg', r => r.startScan([...selected.keys()], 'send', $('recipient').value));
@@ -494,7 +533,7 @@
     lists.media = makeList({
       key: 'media',
       title: 'Photos and videos',
-      lede: 'Images and videos stored in your Drive. Photos that live only in the Google Photos app can\'t be moved this way.',
+      lede: 'Images and videos stored in your Drive. For photos in the Google Photos app, use the Google Photos tab.',
       controls:
         '<div class="seg" role="radiogroup" aria-label="Type">' +
           '<label><input type="radio" name="mtype" value="all" data-c="media" checked><span>All</span></label>' +
@@ -731,6 +770,357 @@
 
     draw();
     return { activate: () => { if (!L.started) { L.started = true; fetchPage(true); } } };
+  }
+
+  /* =========================== Google Photos =========================== */
+  // Three steps, each starting the next by itself: connect the other account once, pick in Google's
+  // picker (copying starts as soon as the picker says Done), then a reminder to delete the originals.
+  function makeGooglePhotos() {
+    const root = $('view-gphotos');
+    const MAX_TILES = 600;                    // thumbnails are fetched and drawn for this many at most
+    const PICK_TIMEOUT_MS = 30 * 60 * 1000;
+    const CONNECT_TIMEOUT_MS = 10 * 60 * 1000;
+    const step = (n, title) => '<li class="step" data-step="' + n + '"><span class="step-n">' + n + '</span>' +
+      '<div class="step-body"><div class="step-title">' + title + '</div><div data-s' + n + '></div></div></li>';
+    root.innerHTML =
+      '<h2>Copy from Google Photos</h2>' +
+      '<p class="lede">Google Photos can\'t hand photos over to another account, so Offload copies them. Your originals stay here until you delete them, and deleting them is what frees the space.</p>' +
+      '<ol class="steps">' + step(1, 'Copy to') + step(2, 'Pick photos and videos') + step(3, 'Copy') + '</ol>' +
+      '<div class="hidden" data-gridwrap><div class="gp-head"><h3>Picked</h3><span class="muted" data-gridmeta></span></div>' +
+      '<div class="flist grid" data-grid></div><p class="muted" data-gridmore></p></div>' +
+      '<div data-msg></div>';
+
+    const el = sel => root.querySelector(sel);
+    const G = { started: false, setup: null, phase: 'loading', connecting: false, session: null, pickWin: null,
+                items: [], byId: {}, status: {}, listDone: false, job: null, running: false, error: '', forgotten: false };
+
+    // ---- setup and the other account ----
+    function refreshSetup(then) {
+      run().withSuccessHandler(s => {
+        G.setup = s;
+        if (['loading', 'setup', 'connect', 'pick'].indexOf(G.phase) !== -1) G.phase = !s.configured ? 'setup' : (s.dest ? 'pick' : 'connect');
+        render();
+        if (then) then(s);
+      }).withFailureHandler(err => say('bad', esc(err.message || err))).photosSetup($('recipient').value.trim());
+    }
+
+    // the sign-in happens in its own window; this page checks back until the account shows up
+    let connectTimer = null;
+    function watchConnect() {
+      clearTimeout(connectTimer);
+      const until = Date.now() + CONNECT_TIMEOUT_MS;
+      const tick = () => refreshSetup(s => {
+        if (s.dest) { G.connecting = false; render(); say('good', 'Connected <b>' + esc(s.dest) + '</b>. Now pick what to copy.'); return; }
+        if (Date.now() > until) { G.connecting = false; render(); return; }
+        connectTimer = setTimeout(tick, 2500);
+      });
+      connectTimer = setTimeout(tick, 2500);
+    }
+
+    root.addEventListener('click', e => {
+      const t = e.target.closest('[data-do]');
+      if (!t) return;
+      const what = t.dataset.do;
+      if (what === 'connect') {
+        const w = window.open(t.href, 'offloadConnect', 'popup=yes,width=520,height=720');
+        if (w) e.preventDefault(); // otherwise the link opens it in a tab
+        G.connecting = true;
+        say('', '');
+        render();
+        watchConnect();
+      } else if (what === 'change') {
+        if (G.running) return;
+        t.disabled = true;
+        run().withSuccessHandler(s => { G.setup = s; reset(); }).withFailureHandler(err => {
+          t.disabled = false;
+          say('bad', esc(err.message || err));
+        }).photosDisconnect();
+      } else if (what === 'pick') {
+        startPick();
+      } else if (what === 'cancel') {
+        G.session = null;
+        G.phase = 'pick';
+        render();
+      } else if (what === 'continue') {
+        resume();
+      } else if (what === 'again') {
+        reset();
+      }
+    });
+
+    // ---- picking ----
+    function startPick() {
+      if (G.phase !== 'pick') return;
+      // open the window during the click so it isn't blocked, and point it at the picker once that exists
+      const w = window.open('', 'offloadPicker', 'popup=yes,width=1040,height=780');
+      G.pickWin = w;
+      G.phase = 'picking';
+      G.session = null;
+      say('', '');
+      render();
+      run().withSuccessHandler(s => {
+        G.session = s;
+        if (w && !w.closed) { try { w.location.href = s.uri; } catch (err) { G.pickWin = null; } }
+        render();
+        watchPick(s);
+      }).withFailureHandler(err => {
+        if (w) { try { w.close(); } catch (e2) { /* already gone */ } }
+        G.phase = 'pick';
+        render();
+        say('bad', esc(err.message || err));
+      }).photosStartPick();
+    }
+
+    function watchPick(s) {
+      const until = Date.now() + PICK_TIMEOUT_MS;
+      const tick = ms => setTimeout(() => {
+        if (G.session !== s) return; // cancelled or replaced
+        run().withSuccessHandler(r => {
+          if (G.session !== s) return;
+          if (r.ready) startCopy();
+          else if (Date.now() > until) { G.session = null; G.phase = 'pick'; render(); say('bad', 'The picker timed out. Select "Choose photos" to try again.'); }
+          else tick(r.pollMs);
+        }).withFailureHandler(err => {
+          if (G.session !== s) return;
+          G.session = null;
+          G.phase = 'pick';
+          render();
+          say('bad', esc(err.message || err));
+        }).photosPoll(s.id);
+      }, Math.max(2000, ms || 3000));
+      tick(s.pollMs);
+    }
+
+    // ---- copying ----
+    function startCopy() {
+      Object.assign(G, { phase: 'copying', items: [], byId: {}, status: {}, listDone: false, job: null, error: '', forgotten: false, running: true });
+      anyBusy++;
+      el('[data-grid]').innerHTML = '';
+      el('[data-s3]').innerHTML = '';
+      render();
+      loadList(null);
+      run().withSuccessHandler(copyLoop).withFailureHandler(stopped).photosStartCopy(G.session.id);
+    }
+
+    function loadList(token) {
+      const s = G.session;
+      run().withSuccessHandler(res => {
+        if (G.session !== s) return;
+        const fresh = (res.items || []).filter(it => !G.byId[it.id]);
+        fresh.forEach(it => { G.byId[it.id] = it; G.items.push(it); });
+        const grid = el('[data-grid]');
+        grid.insertAdjacentHTML('beforeend', fresh.slice(0, Math.max(0, MAX_TILES - grid.children.length)).map(tileHtml).join(''));
+        if (res.nextPageToken) loadList(res.nextPageToken);
+        else G.listDone = true;
+        render();
+        maybeForget();
+      }).withFailureHandler(() => { G.listDone = true; render(); }).photosList(s.id, token, G.items.length < MAX_TILES);
+    }
+
+    function copyLoop(state) {
+      G.job = state;
+      (state.results || []).forEach(r => {
+        G.status[r.id] = r.status === 'progress' ? { status: 'copying', pct: Math.floor(r.done / r.total * 100) } : r;
+        updateTile(r.id);
+      });
+      const cur = state.current && state.current.id;
+      if (cur && (G.status[cur] || {}).status !== 'copying') { G.status[cur] = { status: 'copying' }; updateTile(cur); }
+      render();
+      if (state.done) return finishCopy();
+      run().withSuccessHandler(copyLoop).withFailureHandler(stopped).photosCopyBatch(state);
+    }
+
+    function stopped(err) {
+      G.running = false; anyBusy--;
+      G.phase = 'stopped';
+      G.error = err.message || String(err);
+      render();
+    }
+
+    function resume() {
+      if (G.running) return;
+      G.running = true; anyBusy++;
+      G.phase = 'copying';
+      G.error = '';
+      render();
+      const call = run().withSuccessHandler(copyLoop).withFailureHandler(stopped);
+      G.job ? call.photosCopyBatch(G.job) : call.photosStartCopy(G.session.id);
+    }
+
+    function finishCopy() {
+      G.running = false; anyBusy--;
+      G.phase = 'done';
+      render();
+      loadStorage();
+      maybeForget();
+    }
+
+    // once copying and listing are both over, Google can drop the picked set
+    function maybeForget() {
+      if (G.phase !== 'done' || !G.listDone || !G.session || G.forgotten) return;
+      G.forgotten = true;
+      run().withFailureHandler(() => {}).photosForget(G.session.id);
+    }
+
+    function reset() {
+      Object.assign(G, { session: null, job: null, items: [], byId: {}, status: {}, listDone: false, error: '', pickWin: null });
+      G.phase = G.setup && G.setup.dest ? 'pick' : (G.setup && !G.setup.configured ? 'setup' : 'connect');
+      el('[data-grid]').innerHTML = '';
+      el('[data-s3]').innerHTML = '';
+      say('', '');
+      render();
+    }
+
+    // ---- drawing ----
+    function render() {
+      const S = G.setup, ph = G.phase;
+      const after = ['copying', 'stopped', 'done'].indexOf(ph) !== -1;
+
+      let s1;
+      if (!S) s1 = '<p class="muted"><span class="spinner"></span>Checking…</p>';
+      else if (!S.configured) s1 = '<p class="muted">Copying from Google Photos needs a one-time setup by whoever deployed this copy of Offload. The README explains it under "Google Photos".</p>';
+      else if (S.dest) s1 = '<div class="acct"><span class="avatar sm">' + esc(S.dest.charAt(0).toUpperCase()) + '</span><b>' + esc(S.dest) + '</b>' +
+        (G.running || ph === 'picking' ? '' : '<button class="btn btn-quiet btn-small" data-do="change">Change</button>') + '</div>' +
+        '<p class="muted" style="margin-top:6px">Offload can only add photos there. It can\'t see or change anything already in that account.</p>';
+      else s1 = '<p class="muted">Sign in with the account that has free space. Offload can only add photos to it; it can\'t see or change anything already there.</p>' +
+        '<div class="actions"><a class="btn btn-main" data-do="connect" href="' + esc(S.authUrl) + '" target="_blank" rel="noopener">Connect the other account</a></div>' +
+        (G.connecting ? '<p class="muted" style="margin-top:10px"><span class="spinner"></span>Finish signing in in the other window. This page picks it up by itself.</p>' : '');
+      el('[data-s1]').innerHTML = s1;
+
+      let s2;
+      if (ph === 'pick') {
+        s2 = '<p class="muted">Google\'s own picker opens in a new window. Select up to 2,000 photos and videos, then select <b>Done</b>. Copying starts by itself.</p>' +
+          '<div class="actions"><button class="btn btn-main" data-do="pick">Choose photos</button></div>';
+      } else if (ph === 'picking') {
+        s2 = !G.session ? '<p class="muted"><span class="spinner"></span>Opening Google Photos…</p>'
+          : '<p><span class="spinner"></span>Pick in the Google Photos window, then select <b>Done</b> there.</p>' +
+            '<div class="actions"><a class="btn ' + (G.pickWin ? 'btn-quiet btn-small' : 'btn-main') + '" href="' + esc(G.session.uri) + '" target="_blank" rel="noopener">' +
+            (G.pickWin ? 'Open the picker again' : 'Open the picker') + '</a><button class="btn btn-quiet btn-small" data-do="cancel">Cancel</button></div>';
+      } else if (after) {
+        s2 = '<p class="muted">' + pickedLine() + '</p>';
+      } else {
+        s2 = '<p class="muted">Connect the other account first.</p>';
+      }
+      el('[data-s2]').innerHTML = s2;
+
+      const s3 = el('[data-s3]');
+      if (after) {
+        if (!s3.querySelector('[data-bar]')) s3.innerHTML = '<div class="progress"><span data-bar></span></div><p data-progtext></p><div data-s3note></div>';
+        drawProgress();
+        s3.querySelector('[data-s3note]').innerHTML = ph === 'stopped'
+          ? '<div class="note bad">' + esc(G.error) + '<div class="actions"><button class="btn btn-main btn-small" data-do="continue">Continue</button></div></div>'
+          : (ph === 'done' ? doneHtml() : '');
+      } else {
+        s3.innerHTML = '<p class="muted">Starts as soon as you\'ve picked.</p>';
+      }
+
+      const state = n => {
+        const done = n === 1 ? !!(S && S.dest) : n === 2 ? after : ph === 'done';
+        const active = n === 1 ? ph === 'connect' : n === 2 ? (ph === 'pick' || ph === 'picking') : (ph === 'copying' || ph === 'stopped');
+        return done && !active ? 'is-done' : active ? 'is-active' : (n === 1 && S && !S.configured) || n > 1 ? 'is-off' : '';
+      };
+      root.querySelectorAll('.step').forEach(li => { li.className = 'step ' + state(Number(li.dataset.step)); });
+
+      el('[data-gridwrap]').classList.toggle('hidden', !after);
+      el('[data-gridmeta]').textContent = G.items.length ? G.items.length + (G.listDone ? '' : '+') + ' item(s)' : (after ? 'Loading…' : '');
+      el('[data-gridmore]').textContent = G.items.length > MAX_TILES ? 'Showing the first ' + MAX_TILES + ' of ' + G.items.length + '. All of them are copied.' : '';
+      root.classList.toggle('is-running', G.running);
+    }
+
+    function drawProgress() {
+      const j = G.job, s3 = el('[data-s3]');
+      const total = j ? j.total : 0, done = j ? j.copied + j.failed : 0;
+      s3.querySelector('[data-bar]').style.width = (total ? Math.max(2, done / total * 100) : 2) + '%';
+      let text;
+      if (!j || !j.listed) text = '<span class="spinner"></span>Getting ready…';
+      else text = (G.phase === 'copying' ? '<span class="spinner"></span>' : '') +
+        '<b>' + j.copied + '</b> of ' + total + ' copied, ' + fmtBytes(j.bytes) + (j.failed ? ', ' + j.failed + ' failed' : '') +
+        (G.phase === 'copying' ? '. Keep this tab open.' : '.');
+      s3.querySelector('[data-progtext]').innerHTML = text;
+    }
+
+    function pickedLine() {
+      const n = G.job && G.job.listed ? G.job.total : G.items.length;
+      const r = G.listDone ? dateRange() : null;
+      return '<b>' + n + '</b> picked' + (r ? ', dated ' + (r.from === r.to ? r.from : r.from + ' to ' + r.to) : '') + '.';
+    }
+
+    function dateRange() {
+      const ts = G.items.map(i => Date.parse(i.created)).filter(n => !isNaN(n));
+      if (!ts.length) return null;
+      return { from: fmtDate(new Date(Math.min(...ts)).toISOString()), to: fmtDate(new Date(Math.max(...ts)).toISOString()) };
+    }
+
+    function doneHtml() {
+      const j = G.job, me = G.setup.me;
+      const authuser = u => 'authuser=' + encodeURIComponent(u);
+      const see = j.album && j.album.url ? j.album.url + (j.album.url.indexOf('?') === -1 ? '?' : '&') + authuser(j.dest) : 'https://photos.google.com/?' + authuser(j.dest);
+      let h = '';
+      if (j.copied) {
+        h += '<div class="note good">Copied <b>' + j.copied + '</b> ' + (j.copied === 1 ? 'item' : 'items') + ' (' + fmtBytes(j.bytes) + ') to <b>' + esc(j.dest) + '</b>' +
+          (j.album ? ', in the album "Copied from ' + esc(me) + '"' : '') + '. <a href="' + esc(see) + '" target="_blank" rel="noopener">Have a look</a></div>';
+      }
+      if (j.failed) {
+        const why = {};
+        Object.keys(G.status).forEach(id => { const s = G.status[id]; if (s.status === 'error') why[s.detail] = (why[s.detail] || 0) + 1; });
+        h += '<div class="note bad"><b>' + j.failed + '</b> couldn\'t be copied:<ul>' +
+          Object.keys(why).slice(0, 5).map(k => '<li>' + why[k] + ' × ' + esc(k || 'Unknown error') + '</li>').join('') +
+          '</ul>' + (j.failed === 1 ? 'It\'s marked red below. Pick it again to retry.' : 'They\'re marked red below. Pick them again to retry.') + '</div>';
+      }
+      if (j.copied) {
+        const r = dateRange();
+        h += '<div class="note warn"><b>Your originals are still in ' + esc(me) + ', so no space is freed yet.</b> Once you\'ve checked the copies:<ol>' +
+          '<li>Open Google Photos as ' + esc(me) + ' and select the same ' + (j.failed ? 'items, leaving out ' + (j.failed === 1 ? 'the red one' : 'the ' + j.failed + ' red ones') : j.copied + ' items') +
+          (r ? ' (dated ' + (r.from === r.to ? r.from : r.from + ' to ' + r.to) + ')' : '') + '. Click the first one, then hold Shift and click the last to select everything in between.</li>' +
+          '<li>Delete them, then empty the Trash. Deleted items otherwise sit there for 60 days.</li></ol>' +
+          '<div class="actions"><a class="btn btn-main" href="https://photos.google.com/?' + authuser(me) + '" target="_blank" rel="noopener">Open Google Photos</a>' +
+          '<button class="btn btn-quiet" data-do="again">Copy more</button></div></div>';
+      } else {
+        h += '<div class="actions"><button class="btn btn-quiet" data-do="again">Try again</button></div>';
+      }
+      return h;
+    }
+
+    function tileClass(st) {
+      return { copied: ' is-copied', error: ' is-failed', copying: ' is-copying' }[st.status] || ' is-queued';
+    }
+
+    function gstHtml(st) {
+      if (st.status === 'copied') return '<span class="gst ok" title="Copied">✓</span>';
+      if (st.status === 'error') return '<span class="gst bad" title="' + esc(st.detail || 'Failed') + '">!</span>';
+      if (st.status === 'copying') return '<span class="gst busy" title="Copying' + (st.pct != null ? ', ' + st.pct + '%' : '') + '"></span>';
+      return '';
+    }
+
+    function tileHtml(it) {
+      const st = G.status[it.id] || {};
+      return '<div class="tile static' + tileClass(st) + '" data-gid="' + esc(it.id) + '">' +
+        '<span class="thumb">' + (it.video ? ICON_VIDEO : ICON_IMAGE) + (it.thumb ? '<img src="' + esc(it.thumb) + '" alt="">' : '') + gstHtml(st) + '</span>' +
+        (it.video ? '<span class="vid">Video</span>' : '') +
+        '<span class="fmain"><span class="fname" title="' + esc(it.name) + '">' + esc(it.name) + '</span><span class="fsub">' + esc(fmtDate(it.created)) + '</span></span></div>';
+    }
+
+    function updateTile(id) {
+      const t = el('[data-gid="' + CSS.escape(id) + '"]');
+      if (!t) return;
+      const st = G.status[id] || {};
+      t.className = 'tile static' + tileClass(st);
+      const th = t.querySelector('.thumb');
+      const old = th.querySelector('.gst');
+      if (old) old.remove();
+      th.insertAdjacentHTML('beforeend', gstHtml(st));
+    }
+
+    function say(kind, html) {
+      el('[data-msg]').innerHTML = html ? '<div class="note ' + kind + '">' + html + '</div>' : '';
+    }
+
+    return {
+      activate: () => {
+        if (!G.started) { G.started = true; render(); refreshSetup(); }
+        else if (G.phase === 'connect' || G.phase === 'pick') refreshSetup();
+      }
+    };
   }
 
   function copyText(input, btn) {

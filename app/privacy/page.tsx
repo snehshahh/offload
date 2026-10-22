@@ -15,7 +15,7 @@ export default function Privacy() {
         <Header />
         <main className="prose">
           <h1>Privacy</h1>
-          <p className="fine">Last updated 22 October 2026</p>
+          <p className="fine">Last updated 23 October 2026</p>
 
           <h2>What Offload is</h2>
           <p>
@@ -30,11 +30,22 @@ export default function Privacy() {
             use, and create or accept the ownership transfers you choose. It also reads your email address to show which account
             you&rsquo;re signed in with.
           </p>
+          <p>
+            If you use the Google Photos tab, it also opens Google&rsquo;s photo picker, which lets it read only the photos and
+            videos you select there. In your other account it asks for permission to add photos. That permission can&rsquo;t see
+            or change anything already in that account.
+          </p>
 
           <h2>What it stores</h2>
           <p>
-            Nothing. Offload has no database and no server of its own. File names, sizes and contents stay inside Google. The
-            developer can&rsquo;t see your files or your account.
+            Offload has no database and no server of its own. File names, sizes and contents stay inside Google, and photos you
+            copy go from one Google account to the other through Google&rsquo;s own servers. The developer can&rsquo;t see your
+            files, your photos or your account.
+          </p>
+          <p>
+            The one thing it keeps is the sign-in for your other account, once you connect it on the Google Photos tab, so you
+            don&rsquo;t have to sign in again each time. It&rsquo;s saved in your own account&rsquo;s Apps Script storage, which
+            only you can reach. Selecting Change on that tab removes it.
           </p>
 
           <h2>What it changes</h2>
@@ -43,11 +54,16 @@ export default function Privacy() {
             request on the files you pick. In the receiving account, it accepts those requests and files loose items into a folder
             named after the sender. It emails the receiving account only if you tick that option.
           </p>
+          <p>
+            On the Google Photos tab, it copies the photos and videos you pick into your other account and puts them in an album
+            called &ldquo;Copied from&rdquo; plus your email. It never deletes photos; you do that yourself once you&rsquo;ve
+            checked the copies.
+          </p>
 
           <h2>Removing access</h2>
           <p>
             You can remove Offload&rsquo;s access at any time from your Google Account, under Security, then Third-party apps with
-            account access.
+            account access. If you connected a second account for Google Photos, do the same there.
           </p>
 
           <h2>Use of Google user data</h2>

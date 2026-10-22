@@ -48,8 +48,8 @@ export const FAQS: { q: string; a: string }[] = [
     a: "Space frees up once the other account accepts. Google can take a few hours to update the storage figures, and remember to empty the trash in the account the files came from.",
   },
   {
-    q: "Can it move photos from the Google Photos app?",
-    a: "No. Google doesn't allow apps to transfer photos that live only in Google Photos. Offload moves photos and videos stored in Google Drive. For your Photos library, use Google Photos' partner sharing or Google Takeout.",
+    q: "Can I move my Google Photos to another account?",
+    a: "Yes, as a copy. Google Photos has no way to hand photos to another account, so Offload copies the ones you pick, up to 2,000 at a time, into your other account's Google Photos and gathers them in an album. Your originals stay where they are: delete them once you've checked the copies, and that frees the space. Some very large videos may not copy.",
   },
   {
     q: "Does it work with work or school accounts?",
