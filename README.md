@@ -2,15 +2,30 @@
 
 Move Google Drive files to your other Google account, and free up storage on the first one.
 
-Pick whole folders, your largest files, or photos and videos, and offload them in bulk. The receiving account accepts everything in one place. Offload is a Google Apps Script web app, so it runs inside your own Google account: no server, no database, nothing leaves Google.
+Pick whole folders, your largest files, or photos and videos, and hand them over in bulk. The receiving account accepts everything in one place. The app is a Google Apps Script web app, so it runs inside your own Google account: no server, no database, nothing leaves Google.
 
 ## What's here
 
-| Folder | What it is |
+| Path | What it is |
 | --- | --- |
-| `site/` | The public landing page (SEO, social previews, privacy page). Deployed on Vercel. |
+| `app/`, `components/`, `lib/` | The landing site (Next.js), deployed on Vercel. Landing page, privacy page, SEO metadata, sitemap, robots and manifest. |
 | `apps-script/` | The app itself: `Code.gs`, `Index.html` and `appsscript.json` for a Google Apps Script project. |
 | `brand/` | Logo, profile picture and banners for LinkedIn, X and link previews. |
+
+## Landing site
+
+```bash
+npm install
+npm run dev     # http://localhost:3000
+npm run build
+```
+
+Environment variables (all optional):
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_APP_URL` | The Apps Script web app URL that every "Open Offload" button links to. |
+| `NEXT_PUBLIC_SITE_URL` | The site's public address, for a custom domain. On Vercel, the production address is used automatically. |
 
 ## Run the app yourself
 
