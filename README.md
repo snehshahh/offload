@@ -1,8 +1,8 @@
-# Handover
+# Offload
 
 Move Google Drive files to your other Google account, and free up storage on the first one.
 
-Pick whole folders, your largest files, or photos and videos, and hand them over in bulk. The receiving account accepts everything in one place. Handover is a Google Apps Script web app, so it runs inside your own Google account: no server, no database, nothing leaves Google.
+Pick whole folders, your largest files, or photos and videos, and offload them in bulk. The receiving account accepts everything in one place. Offload is a Google Apps Script web app, so it runs inside your own Google account: no server, no database, nothing leaves Google.
 
 ## What's here
 
@@ -27,4 +27,4 @@ To update later: **Deploy → Manage deployments → Edit → Version: New versi
 - Only files you own can be transferred, and the other account must accept.
 - Photos that live only in the Google Photos app can't be moved; photos stored in Drive can.
 
-Handover isn't affiliated with Google. Google Drive and Gmail are trademarks of Google LLC.
+Offload isn't affiliated with Google. Google Drive and Gmail are trademarks of Google LLC.

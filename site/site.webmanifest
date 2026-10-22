@@ -1,6 +1,6 @@
 {
-  "name": "Handover",
-  "short_name": "Handover",
+  "name": "Offload",
+  "short_name": "Offload",
   "description": "Move Google Drive files to your other Google account.",
   "start_url": "/",
   "display": "standalone",

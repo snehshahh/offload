@@ -35,7 +35,7 @@ function doGet(e) {
   t.acceptFolders = params.accept || '';
   t.appUrl = ScriptApp.getService().getUrl();
   const out = t.evaluate()
-    .setTitle('Handover: move Drive files to your other Google account')
+    .setTitle('Offload: move Drive files to your other Google account')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   if (FAVICON_URL) out.setFaviconUrl(FAVICON_URL);
   return out;
