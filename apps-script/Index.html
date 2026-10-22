@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mist:#EEF1F4;   --surface:#FFFFFF; --ink:#1D2A33;   --ink-2:#3C4B56; --muted:#6B7A86;
+    --hair:#DCE2E7;   --hover:#F3F6F8;
+    --teal:#2F6F62;   --teal-deep:#245A4F; --teal-soft:#E3EFEC;
+    --amber:#9A6516;  --amber-soft:#FBF1DE;
+    --red:#A63D36;    --red-soft:#F8E6E4;
+    --slate-soft:#ECEFF2;
+    --radius-lg:16px; --radius:10px; --radius-sm:7px;
+  }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:var(--mist); color:var(--ink); font:15px/1.55 "Instrument Sans", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:880px; margin:0 auto; padding:40px 16px 64px; }
+  :focus-visible { outline:2px solid var(--teal); outline-offset:2px; border-radius:6px; }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+  .hidden { display:none !important; }
+  .muted { color:var(--muted); font-size:13px; }
+
+  /* header */
+  header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
+  .brandline { display:flex; align-items:center; gap:9px; font-weight:700; font-size:17px; letter-spacing:-0.01em; margin-bottom:14px; }
+  .brandline .mark { display:block; border-radius:8px; }
+  h1 { font-size:28px; line-height:1.15; letter-spacing:-0.02em; font-weight:700; margin:0; }
+  .who { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--muted); }
+  .avatar { width:32px; height:32px; border-radius:50%; background:var(--teal); color:#fff; display:grid; place-items:center; font-weight:600; font-size:14px; }
+  .who b { color:var(--ink); font-weight:600; }
+
+  /* panels */
+  .panel { background:var(--surface); border-radius:var(--radius-lg); padding:24px; margin-bottom:16px; box-shadow:0 1px 0 var(--hair), 0 8px 24px -16px rgba(29,42,51,.25); }
+  .panel h2 { font-size:17px; font-weight:600; letter-spacing:-0.01em; margin:0 0 4px; }
+  .lede { color:var(--muted); font-size:14px; margin:0 0 16px; max-width:62ch; }
+
+  /* storage */
+  .st-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:12px; }
+  .st-text { font-size:14px; color:var(--ink-2); margin-bottom:12px; }
+  .st-text b { font-size:22px; font-weight:700; letter-spacing:-0.01em; color:var(--ink); margin-right:2px; }
+  .st-warn { color:var(--red); font-weight:600; }
+  .bar { display:flex; height:10px; border-radius:999px; overflow:hidden; background:var(--slate-soft); }
+  .bar span { height:100%; transition:width .5s ease; }
+  .seg-drive { background:var(--teal); }
+  .seg-trash { background:#D9A441; }
+  .seg-other { background:#A9B4BE; }
+  .legend { display:flex; gap:18px; flex-wrap:wrap; margin-top:10px; font-size:13px; color:var(--muted); }
+  .legend i { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:1px; }
+
+  /* tabs */
+  .tabs { display:flex; gap:4px; background:#E2E7EB; padding:4px; border-radius:12px; margin-bottom:16px; overflow-x:auto; }
+  .tab { flex:1; white-space:nowrap; border:0; background:transparent; color:var(--ink-2); font:inherit; font-size:14px; font-weight:500; padding:9px 14px; border-radius:9px; cursor:pointer; }
+  .tab:hover { color:var(--ink); }
+  .tab[aria-selected="true"] { background:#fff; color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(29,42,51,.12); }
+
+  /* form + buttons */
+  label.field { display:block; font-size:13px; font-weight:600; color:var(--ink-2); margin-bottom:6px; }
+  input[type=email], input[type=text], input[type=search], select { width:100%; padding:10px 14px; border:1px solid var(--hair); border-radius:var(--radius); font:inherit; font-size:14px; color:var(--ink); background:#fff; transition:border-color .12s, box-shadow .12s; }
+  select { width:auto; padding-right:34px; appearance:none; -webkit-appearance:none; cursor:pointer;
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7A86' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center; }
+  input:focus, select:focus { outline:none; border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-soft); }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+  .btn { border:0; border-radius:var(--radius); padding:11px 20px; font:inherit; font-weight:600; cursor:pointer; transition:background .12s, transform .06s; }
+  .btn:active { transform:translateY(1px); }
+  .btn-main { background:var(--teal); color:#fff; }
+  .btn-main:hover { background:var(--teal-deep); }
+  .btn-quiet { background:var(--slate-soft); color:var(--ink); }
+  .btn-quiet:hover { background:#E1E6EA; }
+  .btn-small { padding:6px 12px; font-size:13px; }
+  .btn:disabled { opacity:.45; cursor:default; transform:none; }
+  .note { border-radius:var(--radius); padding:12px 14px; margin-top:14px; font-size:14px; }
+  .note.bad { background:var(--red-soft); color:var(--red); }
+  .note.good { background:var(--teal-soft); color:var(--teal-deep); }
+  .note a { color:inherit; font-weight:600; }
+  .linkbox { display:flex; gap:8px; margin-top:8px; }
+  .linkbox input { font-size:13px; color:var(--ink-2); }
+  .linkbox .btn { flex:none; white-space:nowrap; }
+  code { background:var(--slate-soft); padding:1px 6px; border-radius:5px; font-size:13px; }
+  .spinner { display:inline-block; width:12px; height:12px; border:2px solid var(--hair); border-top-color:var(--teal); border-radius:50%; animation:spin .9s linear infinite; vertical-align:-1px; margin-right:8px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* checkbox (shared) */
+  .ck { appearance:none; -webkit-appearance:none; flex:none; width:18px; height:18px; margin:0; border:1.5px solid #B5C0C8; border-radius:5px; background:#fff; display:grid; place-items:center; cursor:pointer; transition:background .12s, border-color .12s; }
+  .ck:checked { background:var(--teal); border-color:var(--teal); }
+  .ck:checked::after { content:""; width:9px; height:5px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:translateY(-1px) rotate(-45deg); }
+  .ck:indeterminate { background:var(--teal); border-color:var(--teal); }
+  .ck:indeterminate::after { content:""; width:8px; height:2px; background:#fff; border-radius:1px; }
+  .ck:disabled { opacity:.35; cursor:default; }
+
+  /* folder picker */
+  .picker { border:1px solid var(--hair); border-radius:var(--radius); max-height:380px; overflow:auto; padding:6px; }
+  .trow { display:flex; align-items:center; gap:2px; min-height:40px; padding-left:calc(var(--d, 0) * 22px); border-radius:var(--radius-sm); transition:background .12s; }
+  .trow:hover { background:var(--hover); }
+  .trow.is-on { background:var(--teal-soft); }
+  .tw { flex:none; width:28px; height:28px; border:0; background:none; border-radius:6px; display:grid; place-items:center; cursor:pointer; color:var(--muted); }
+  .tw:hover { background:rgba(29,42,51,.06); color:var(--ink); }
+  .tw svg { transition:transform .18s ease; }
+  .tw[aria-expanded="true"] svg { transform:rotate(90deg); }
+  .tpick { flex:1; min-width:0; display:flex; align-items:center; gap:10px; padding:6px 10px 6px 4px; cursor:pointer; }
+  .ficon { flex:none; color:#7E98A6; }
+  .trow.is-on .ficon { color:var(--teal); }
+  .tname { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14.5px; }
+  .tsize { flex:none; min-width:64px; text-align:right; font-size:13px; color:var(--ink-2); font-weight:600; font-variant-numeric:tabular-nums; margin-right:10px; }
+  .tsize.wait { color:var(--muted); font-weight:400; }
+  .tsize.wait::before { content:""; display:inline-block; width:10px; height:10px; border:2px solid var(--hair); border-top-color:var(--teal); border-radius:50%; animation:spin .9s linear infinite; vertical-align:-1px; }
+  .tsize.zero { color:var(--muted); font-weight:400; }
+  .tray .total { font-weight:600; color:var(--ink); }
+  .tnote { flex:none; font-size:12px; color:var(--muted); background:var(--slate-soft); border-radius:999px; padding:1px 9px; margin-right:8px; }
+  .tempty, .tload { padding:8px 12px 8px calc(var(--d, 0) * 22px + 40px); font-size:13px; color:var(--muted); }
+  .tray { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:14px; min-height:30px; }
+  .tray .count { font-size:13px; color:var(--muted); margin-right:4px; }
+  .pill { display:inline-flex; align-items:center; gap:4px; background:var(--teal-soft); color:var(--teal-deep); border-radius:999px; padding:3px 4px 3px 12px; font-size:13px; font-weight:500; max-width:240px; }
+  .pill span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pill button { flex:none; width:20px; height:20px; border:0; border-radius:50%; background:transparent; color:var(--teal-deep); cursor:pointer; display:grid; place-items:center; }
+  .pill button:hover { background:rgba(36,90,79,.12); }
+
+  /* file lists (large, media, inbox) */
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .toolbar .grow { flex:1 1 220px; }
+  .seg { display:inline-flex; background:var(--slate-soft); border-radius:var(--radius); padding:3px; }
+  .seg label { cursor:pointer; }
+  .seg input { position:absolute; opacity:0; pointer-events:none; }
+  .seg span { display:block; padding:7px 12px; border-radius:8px; font-size:13px; font-weight:500; color:var(--ink-2); }
+  .seg input:checked + span { background:#fff; color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(29,42,51,.12); }
+  .seg input:focus-visible + span { outline:2px solid var(--teal); outline-offset:1px; }
+  .listhead { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 4px; }
+  .selall { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:500; cursor:pointer; }
+  .flist { border:1px solid var(--hair); border-radius:var(--radius); max-height:540px; overflow:auto; }
+  .frow { display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid var(--slate-soft); cursor:pointer; transition:background .12s; }
+  .frow:last-child { border-bottom:0; }
+  .frow:hover { background:var(--hover); }
+  .frow.is-on { background:var(--teal-soft); }
+  .frow.is-done { cursor:default; }
+  .thumb { position:relative; flex:none; width:44px; height:44px; border-radius:8px; background:var(--slate-soft); display:grid; place-items:center; color:#7E98A6; overflow:hidden; }
+  .thumb img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .fmain { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .fname { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14.5px; }
+  .fsub { display:flex; gap:12px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); }
+  .fsub .sz { color:var(--ink-2); font-weight:600; font-variant-numeric:tabular-nums; }
+  .flist .empty { padding:28px 16px; text-align:center; color:var(--muted); font-size:14px; }
+
+  .flist.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; padding:10px; border:1px solid var(--hair); }
+  .flist.grid .empty { grid-column:1 / -1; }
+  .tile { position:relative; display:flex; flex-direction:column; gap:6px; padding:6px; border-radius:12px; cursor:pointer; transition:background .12s; }
+  .tile:hover { background:var(--hover); }
+  .tile.is-on { background:var(--teal-soft); }
+  .tile .thumb { width:100%; height:auto; aspect-ratio:1 / 1; border-radius:9px; }
+  .tile.is-on .thumb { box-shadow:0 0 0 3px var(--teal); }
+  .tile .ck { position:absolute; top:12px; left:12px; z-index:1; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  .tile .vid { position:absolute; right:12px; top:12px; z-index:1; background:rgba(29,42,51,.72); color:#fff; border-radius:6px; padding:1px 6px; font-size:11px; font-weight:600; }
+  .tile .badge { position:absolute; left:12px; bottom:58px; z-index:1; }
+  .tile .fname { font-size:13px; }
+
+  .more { text-align:center; margin-top:12px; }
+  .actionbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid var(--slate-soft); }
+  .selinfo { font-size:14px; color:var(--ink-2); }
+  .selinfo b { color:var(--ink); }
+
+  /* results table */
+  .res-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .summary { display:flex; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:13px; margin-top:2px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin:16px 0 12px; }
+  .chip { border:1px solid var(--hair); background:#fff; color:var(--ink-2); border-radius:999px; padding:5px 12px; font:inherit; font-size:13px; cursor:pointer; }
+  .chip:hover { background:var(--hover); }
+  .chip.active { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .chip .n { font-variant-numeric:tabular-nums; margin-left:6px; opacity:.7; }
+  .tablewrap { border:1px solid var(--hair); border-radius:var(--radius); overflow:auto; max-height:520px; margin-top:10px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--slate-soft); vertical-align:middle; }
+  tr:last-child td { border-bottom:0; }
+  th { position:sticky; top:0; background:#F7F9FA; font-weight:600; font-size:13px; color:var(--muted); }
+  td.nm { display:flex; align-items:center; gap:10px; }
+  td.nm svg { flex:none; color:#7E98A6; }
+  td.nm a { color:var(--ink); text-decoration:none; word-break:break-word; }
+  td.nm a:hover { color:var(--teal); text-decoration:underline; }
+  td.dt { color:var(--muted); font-size:13px; word-break:break-word; }
+
+  .badge { display:inline-block; border-radius:999px; padding:2px 10px; font-size:12.5px; font-weight:600; white-space:nowrap; }
+  .t-green { background:var(--teal-soft); color:var(--teal-deep); }
+  .t-amber { background:var(--amber-soft); color:var(--amber); }
+  .t-blue  { background:#E4ECF6; color:#2C5786; }
+  .t-grey  { background:var(--slate-soft); color:#56636D; }
+  .t-red   { background:var(--red-soft); color:var(--red); }
+
+  @media (max-width:560px) {
+    .wrap { padding-top:24px; }
+    h1 { font-size:24px; }
+    .panel { padding:18px; }
+    .linkbox { flex-direction:column; }
+    th:nth-child(3), td:nth-child(3) { display:none; }
+    .flist.grid { grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); }
+    .frow .badge { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brandline"><svg class="mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><rect width="30" height="30" aria-hidden="true" rx="15" fill="#2F6F62"/>
+<path d="M9 19.5a3.5 3.5 0 0 1 3.5-3.5h6.4a3 3 0 0 1 2.2.9l2 2.1h11.4a3.5 3.5 0 0 1 3.5 3.5v13a3.5 3.5 0 0 1-3.5 3.5h-22A3.5 3.5 0 0 1 9 35.5Z" fill="#8FC4B6"/>
+<path d="M22 29.5a4 4 0 0 1 4-4h7.6a3.6 3.6 0 0 1 2.6 1.1l2.3 2.4h13.5a4 4 0 0 1 4 4v15a4 4 0 0 1-4 4H26a4 4 0 0 1-4-4Z" fill="#fff" stroke="#2F6F62" stroke-width="2.5"/></svg>
+<span>Handover</span></div>
+      <h1>Move Drive files to another account</h1>
+    </div>
+    <div class="who"><span class="avatar" id="avatar">·</span><span>Signed in as <b id="me">…</b></span></div>
+  </header>
+
+  <!-- STORAGE -->
+  <section class="panel">
+    <div class="st-head">
+      <h2>Storage</h2>
+      <button class="btn btn-quiet btn-small" id="storageRefresh">Refresh</button>
+    </div>
+    <div id="storageText" class="st-text">Loading…</div>
+    <div class="bar" id="storageBar"></div>
+    <div class="legend" id="storageLegend"></div>
+  </section>
+
+  <!-- TABS -->
+  <nav class="tabs hidden" id="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="folders">Folders</button>
+    <button class="tab" role="tab" data-tab="large">Large files</button>
+    <button class="tab" role="tab" data-tab="media">Photos and videos</button>
+    <button class="tab" role="tab" data-tab="inbox">Waiting for you</button>
+  </nav>
+
+  <!-- SEND TO (Folders, Large files, Photos) -->
+  <section class="panel hidden" id="sendTo">
+    <label class="field" for="recipient">Send to</label>
+    <input type="email" id="recipient" placeholder="Destination Gmail, e.g. name@gmail.com" autocomplete="email">
+    <p class="muted" style="margin:8px 0 0">The other account has to accept before anything moves or any space frees up.</p>
+  </section>
+
+  <!-- FOLDERS -->
+  <div id="view-folders" class="hidden">
+    <section class="panel">
+      <h2>Choose folders</h2>
+      <p class="lede">Everything inside comes along: subfolders, files, the lot. Open a folder to pick something deeper.</p>
+      <div id="tree" class="picker" role="tree" aria-label="Your folders"><div class="tload"><span class="spinner"></span>Loading your folders…</div></div>
+      <div class="tray" id="tray"><span class="count">Nothing selected yet</span></div>
+      <div class="actions">
+        <button class="btn btn-main" id="sendBtn">Send transfer requests</button>
+        <button class="btn btn-quiet" id="scanBtn">Check status</button>
+      </div>
+      <div id="sendMsg"></div>
+    </section>
+  </div>
+
+  <!-- LARGE FILES / PHOTOS / INBOX (built by script) -->
+  <section class="panel hidden" id="view-large"></section>
+  <section class="panel hidden" id="view-media"></section>
+  <section class="panel hidden" id="view-inbox"></section>
+
+  <!-- ACCEPT LINK MODE -->
+  <div id="acceptView" class="hidden">
+    <section class="panel">
+      <h2>Files sent to you</h2>
+      <p class="lede">Covers <b id="acceptCount"></b> folder(s) and everything inside them. Once accepted, they count against your storage.</p>
+      <div class="actions">
+        <button class="btn btn-main" id="acceptBtn">Accept all</button>
+        <button class="btn btn-quiet" id="acceptScanBtn">See what's waiting</button>
+      </div>
+      <div id="acceptMsg"></div>
+    </section>
+  </div>
+
+  <!-- FOLDER JOB RESULTS -->
+  <section id="results" class="panel hidden">
+    <div class="res-head">
+      <h2 id="resTitle">Working…</h2>
+      <span class="muted" id="resProgress"></span>
+    </div>
+    <div class="summary"><span id="resFolders"></span><span id="resTotal"></span></div>
+    <div class="chips" id="chips"></div>
+    <input type="search" id="search" placeholder="Search by name">
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th style="width:46%">Name</th><th style="width:20%">Status</th><th>Details</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="rowNote"></p>
+    <div id="doneBox" class="hidden"></div>
+  </section>
+</div>
+
+<script>
+  const MODE = <?= mode ?>;
+  const ACCEPT_FOLDERS = <?= acceptFolders ?>;
+  const APP_URL = <?= appUrl ?>;
+  const INBOX_URL = APP_URL + '?inbox=1';
+  const cleanIds = s => String(s || '').split(',').map(x => x.replace(/[^A-Za-z0-9_-]/g, '')).filter(Boolean);
+  const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  const MAX_ROWS = 500;
+  const DEBOUNCE_MS = 400;
+
+  const ICON_FOLDER = '<svg class="ficon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h3.6c.6 0 1.2.24 1.65.66L12.2 6H18.5A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-11Z"/></svg>';
+  const ICON_FILE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v11.5A1.5 1.5 0 0 1 17.5 21h-10A1.5 1.5 0 0 1 6 19.5v-15A1.5 1.5 0 0 1 7.5 3Z"/><path d="M14 3v5h5"/></svg>';
+  const ICON_IMAGE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/></svg>';
+  const ICON_VIDEO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/></svg>';
+  const ICON_CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+  const ICON_X = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+
+  const STATUS = {
+    requested:      { label: 'Request sent',        tone: 'blue'  },
+    alreadyPending: { label: 'Already pending',     tone: 'amber' },
+    pending:        { label: 'Pending acceptance',  tone: 'amber' },
+    waiting:        { label: 'Waiting for you',     tone: 'amber' },
+    notRequested:   { label: 'Not requested yet',   tone: 'grey'  },
+    accepted:       { label: 'Accepted',            tone: 'green' },
+    transferred:    { label: 'Transferred',         tone: 'green' },
+    alreadyYours:   { label: 'Already yours',       tone: 'green' },
+    yours:          { label: 'Yours',               tone: 'green' },
+    notOwned:       { label: 'Not owned by you',    tone: 'grey'  },
+    nothingPending: { label: 'Nothing pending',     tone: 'grey'  },
+    notPending:     { label: 'Nothing pending',     tone: 'grey'  },
+    error:          { label: 'Error',               tone: 'red'   }
+  };
+  const DONE_STATUSES = ['requested', 'alreadyPending', 'accepted', 'alreadyYours'];
+
+  const $ = id => document.getElementById(id);
+  const run = () => google.script.run;
+  const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+  let anyBusy = 0; // counts running jobs, for the leave-page warning
+
+  window.addEventListener('beforeunload', e => { if (anyBusy > 0) { e.preventDefault(); e.returnValue = ''; } });
+
+  run().withSuccessHandler(e => {
+    $('me').textContent = e || 'unknown';
+    $('avatar').textContent = (e || '?').charAt(0).toUpperCase();
+  }).getMe();
+
+  /* =========================== storage =========================== */
+  function fmtBytes(b) {
+    if (b === null || b === undefined) return '—';
+    const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let i = 0; while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+    return (b >= 100 || i === 0 ? b.toFixed(0) : b.toFixed(1)) + ' ' + u[i];
+  }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  const loadStorage = debounce(() => {
+    $('storageText').textContent = 'Loading…';
+    run().withSuccessHandler(s => {
+      const other = Math.max(0, s.usage - s.drive - s.trash);
+      const driveOnly = Math.max(0, s.drive - s.trash);
+      const total = s.limit || s.usage || 1;
+      const pct = v => Math.min(100, (v / total) * 100).toFixed(2) + '%';
+      const used = s.limit ? Math.round((s.usage / s.limit) * 100) : null;
+      const freeTxt = s.limit ? fmtBytes(Math.max(0, s.limit - s.usage)) + ' free' : 'Unlimited';
+      $('storageText').innerHTML = '<b>' + fmtBytes(s.usage) + '</b> used' +
+        (s.limit ? ' of ' + fmtBytes(s.limit) + ', ' : ', ') +
+        '<span class="' + (used !== null && used >= 90 ? 'st-warn' : '') + '">' + freeTxt + '</span>';
+      $('storageBar').innerHTML =
+        '<span class="seg-drive" style="width:' + pct(driveOnly) + '"></span>' +
+        '<span class="seg-trash" style="width:' + pct(s.trash) + '"></span>' +
+        '<span class="seg-other" style="width:' + pct(other) + '"></span>';
+      $('storageLegend').innerHTML =
+        '<span><i class="seg-drive"></i>Drive ' + fmtBytes(driveOnly) + '</span>' +
+        '<span><i class="seg-trash"></i>Trash ' + fmtBytes(s.trash) + '</span>' +
+        '<span><i class="seg-other"></i>Gmail and Photos ' + fmtBytes(other) + '</span>';
+    }).withFailureHandler(err => {
+      $('storageText').textContent = "Couldn't load storage: " + (err.message || err);
+    }).getStorage();
+  }, 300);
+  loadStorage();
+  $('storageRefresh').onclick = loadStorage;
+
+  /* =========================== tabs =========================== */
+  const lists = {};
+  let currentTab = null;
+  let resultsUsed = false;
+
+  function showTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+    ['folders', 'large', 'media', 'inbox'].forEach(t => $('view-' + t).classList.toggle('hidden', t !== tab));
+    $('sendTo').classList.toggle('hidden', tab === 'inbox');
+    $('results').classList.toggle('hidden', !(tab === 'folders' && resultsUsed));
+    if (lists[tab]) lists[tab].activate();
+  }
+
+  /* =========================== page setup =========================== */
+  if (MODE === 'accept') {
+    $('acceptView').classList.remove('hidden');
+    const ids = cleanIds(ACCEPT_FOLDERS);
+    $('acceptCount').textContent = ids.length;
+    $('acceptBtn').onclick = () => begin('accept', 'acceptMsg', r => r.startAccept(ids));
+    $('acceptScanBtn').onclick = () => begin('scan', 'acceptMsg', r => r.startScan(ids, 'accept', ''));
+  } else {
+    $('tabs').classList.remove('hidden');
+    document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+    setupLists();
+    loadChildren('root', $('tree'), 0);
+    $('sendBtn').onclick = () => begin('send', 'sendMsg', r => r.startSend([...selected.keys()], $('recipient').value));
+    $('scanBtn').onclick = () => begin('scan', 'sendMsg', r => r.startScan([...selected.keys()], 'send', $('recipient').value));
+    showTab(MODE === 'inbox' ? 'inbox' : 'folders');
+  }
+
+  /* =========================== file lists =========================== */
+  function setupLists() {
+    lists.large = makeList({
+      key: 'large',
+      title: 'Large files',
+      lede: 'Your biggest files, largest first. These free up the most space.',
+      controls:
+        '<select data-c="minMB" aria-label="Minimum size">' +
+          '<option value="50">50 MB and up</option>' +
+          '<option value="100" selected>100 MB and up</option>' +
+          '<option value="250">250 MB and up</option>' +
+          '<option value="500">500 MB and up</option>' +
+          '<option value="1024">1 GB and up</option>' +
+        '</select>',
+      opts: root => ({ kind: 'large', minMB: root.querySelector('[data-c=minMB]').value, sort: 'size' }),
+      fetchName: 'listMyFiles',
+      action: 'send',
+      actionLabel: 'Transfer selected',
+      layout: 'rows',
+      empty: 'No files that size. Try a smaller minimum.'
+    });
+
+    lists.media = makeList({
+      key: 'media',
+      title: 'Photos and videos',
+      lede: 'Images and videos stored in your Drive. Photos that live only in the Google Photos app can\'t be moved this way.',
+      controls:
+        '<div class="seg" role="radiogroup" aria-label="Type">' +
+          '<label><input type="radio" name="mtype" value="all" data-c="media" checked><span>All</span></label>' +
+          '<label><input type="radio" name="mtype" value="image" data-c="media"><span>Photos</span></label>' +
+          '<label><input type="radio" name="mtype" value="video" data-c="media"><span>Videos</span></label>' +
+        '</div>' +
+        '<select data-c="sort" aria-label="Sort"><option value="size">Largest first</option><option value="newest">Newest first</option></select>' +
+        '<select data-c="minMB" aria-label="Minimum size"><option value="0">Any size</option><option value="10">10 MB and up</option><option value="100">100 MB and up</option></select>',
+      opts: root => ({
+        kind: 'media',
+        media: (root.querySelector('[data-c=media]:checked') || {}).value || 'all',
+        sort: root.querySelector('[data-c=sort]').value,
+        minMB: root.querySelector('[data-c=minMB]').value
+      }),
+      fetchName: 'listMyFiles',
+      action: 'send',
+      actionLabel: 'Transfer selected',
+      layout: 'grid',
+      empty: 'No photos or videos match.'
+    });
+
+    lists.inbox = makeList({
+      key: 'inbox',
+      title: 'Waiting for you',
+      lede: 'Everything other accounts have offered to hand over to you. Make sure you\'re signed in as the account that should receive the files. Loose files go into a folder called "Transferred from" plus the sender\'s email, created in your Drive the first time it\'s needed.',
+      controls: '<input type="email" data-c="from" placeholder="Only from (email, optional)" style="flex:1 1 220px">',
+      opts: root => ({ from: root.querySelector('[data-c=from]').value }),
+      fetchName: 'listInbox',
+      action: 'accept',
+      actionLabel: 'Accept selected',
+      layout: 'rows',
+      showOwner: true,
+      empty: 'Nothing is waiting for you right now.'
+    });
+  }
+
+  function makeList(cfg) {
+    const root = $('view-' + cfg.key);
+    root.innerHTML =
+      '<h2>' + esc(cfg.title) + '</h2><p class="lede">' + esc(cfg.lede) + '</p>' +
+      '<div class="toolbar"><input type="search" class="grow" data-q placeholder="Search by name">' + cfg.controls + '</div>' +
+      '<div class="listhead"><label class="selall"><input type="checkbox" class="ck" data-all> Select all on screen</label><span class="muted" data-meta></span></div>' +
+      '<div class="flist' + (cfg.layout === 'grid' ? ' grid' : '') + '" data-list></div>' +
+      '<div class="more hidden" data-more><button class="btn btn-quiet btn-small">Load more</button></div>' +
+      '<div class="actionbar"><div class="selinfo" data-sel>Nothing selected</div><button class="btn btn-main" data-act>' + esc(cfg.actionLabel) + '</button></div>' +
+      '<div data-msg></div>';
+
+    const el = sel => root.querySelector(sel);
+    const L = { items: [], byId: {}, sel: new Set(), status: {}, token: null, seq: 0, loading: false, busy: false, started: false, scanned: 0, auto: 0 };
+    const AUTO_PAGES = 15; // keep searching on its own while nothing has been found yet
+
+    // ---- fetching (debounced, stale responses ignored) ----
+    function fetchPage(reset) {
+      if (!reset && (L.loading || !L.token)) return;
+      const my = ++L.seq;
+      L.loading = true;
+      if (reset) { L.items = []; L.byId = {}; L.sel.clear(); L.token = null; L.scanned = 0; L.auto = 0; }
+      draw();
+      const opts = Object.assign(cfg.opts(root), { query: el('[data-q]').value.trim(), pageToken: reset ? null : L.token });
+      run().withSuccessHandler(res => {
+        if (my !== L.seq) return;
+        L.loading = false;
+        (res.items || []).forEach(it => { if (!L.byId[it.id]) { L.byId[it.id] = it; L.items.push(it); } });
+        L.token = res.nextPageToken || null;
+        L.scanned += res.scanned || 0;
+        if (!L.items.length && L.token && L.auto < AUTO_PAGES) {
+          L.auto++;
+          draw();
+          fetchPage(false);
+          return;
+        }
+        draw();
+      }).withFailureHandler(err => {
+        if (my !== L.seq) return;
+        L.loading = false;
+        draw();
+        say('bad', esc(err.message || err));
+      })[cfg.fetchName](opts);
+    }
+    const refetch = debounce(() => fetchPage(true), DEBOUNCE_MS);
+
+    el('[data-q]').addEventListener('input', refetch);
+    root.querySelectorAll('[data-c]').forEach(c => c.addEventListener(c.tagName === 'INPUT' && c.type !== 'radio' ? 'input' : 'change', refetch));
+    el('[data-more] button').onclick = () => fetchPage(false);
+
+    // ---- selection ----
+    const statusOf = it => L.status[it.id] ? L.status[it.id].status : (cfg.action === 'send' && it.pendingTo ? 'alreadyPending' : null);
+    const selectable = it => DONE_STATUSES.indexOf(statusOf(it)) === -1;
+
+    el('[data-list]').addEventListener('change', e => {
+      const cb = e.target.closest('input[data-id]');
+      if (!cb) return;
+      cb.checked ? L.sel.add(cb.dataset.id) : L.sel.delete(cb.dataset.id);
+      const row = cb.closest('[data-row]');
+      if (row) row.classList.toggle('is-on', cb.checked);
+      drawSelection();
+    });
+    el('[data-all]').addEventListener('change', e => {
+      const on = e.target.checked;
+      L.items.forEach(it => { if (selectable(it)) on ? L.sel.add(it.id) : L.sel.delete(it.id); });
+      draw();
+    });
+
+    // ---- action (locked while running, so repeated clicks do nothing) ----
+    el('[data-act]').onclick = () => {
+      if (L.busy || !L.sel.size) return;
+      const ids = [...L.sel];
+      let recipient = null;
+      if (cfg.action === 'send') {
+        recipient = $('recipient').value.trim();
+        if (!EMAIL_RE.test(recipient)) { say('bad', 'Enter the destination Gmail in "Send to" first.'); $('recipient').focus(); return; }
+      }
+      L.busy = true; anyBusy++;
+      say('', '');
+      const total = ids.length;
+      let done = 0;
+      drawSelection();
+
+      const step = list => {
+        el('[data-sel]').innerHTML = '<span class="spinner"></span>Working on ' + total + ' item(s), ' + done + ' done. Keep this tab open.';
+        const call = run().withSuccessHandler(res => {
+          (res.results || []).forEach(r => { L.status[r.id] = r; L.sel.delete(r.id); done++; });
+          draw();
+          if (res.remaining && res.remaining.length) step(res.remaining);
+          else finish();
+        }).withFailureHandler(err => {
+          L.busy = false; anyBusy--;
+          draw();
+          say('bad', esc(err.message || err) + ' Select the remaining items and try again; finished ones are skipped.');
+        });
+        cfg.action === 'send' ? call.transferFiles(list, recipient) : call.acceptFiles(list);
+      };
+
+      const finish = () => {
+        L.busy = false; anyBusy--;
+        draw();
+        loadStorage();
+        const c = {};
+        ids.forEach(id => { const s = (L.status[id] || {}).status || 'error'; c[s] = (c[s] || 0) + 1; });
+        if (cfg.action === 'send') {
+          const ok = (c.requested || 0) + (c.alreadyPending || 0);
+          say('good', 'Sent ' + ok + ' item(s) to <b>' + esc(recipient) + '</b>' + (c.error ? ', ' + c.error + ' failed' : '') + '. Nothing moves until they accept.' +
+            '<div class="linkbox"><input type="text" readonly value="' + esc(INBOX_URL) + '" data-link><button class="btn btn-quiet" data-copy>Copy link</button></div>' +
+            '<span class="muted">Open this link signed in as ' + esc(recipient) + ' and go to "Waiting for you".</span>');
+          const copy = el('[data-copy]');
+          if (copy) copy.onclick = () => copyText(el('[data-link]'), copy);
+        } else {
+          say('good', 'Accepted ' + (c.accepted || 0) + ' item(s)' + (c.error ? ', ' + c.error + ' failed' : '') + '. Storage figures can take a few hours to catch up.');
+        }
+      };
+      step(ids);
+    };
+
+    // ---- drawing ----
+    function draw() {
+      const list = el('[data-list]');
+      if (!L.items.length) {
+        const checked = L.scanned ? ' Checked ' + L.scanned + ' file(s) so far.' : '';
+        list.innerHTML = '<div class="empty">' +
+          (L.loading ? '<span class="spinner"></span>Searching…' + checked
+                     : esc(cfg.empty) + checked + (L.token ? ' Select "Load more" to keep searching.' : '')) +
+          '</div>';
+      } else {
+        list.innerHTML = L.items.map(cfg.layout === 'grid' ? tileHtml : rowHtml).join('');
+      }
+      const more = el('[data-more]');
+      more.classList.toggle('hidden', !L.token);
+      more.querySelector('button').disabled = L.loading;
+      more.querySelector('button').innerHTML = L.loading && L.items.length ? '<span class="spinner"></span>Loading' : 'Load more';
+      const totalSize = L.items.reduce((a, it) => a + (it.size || 0), 0);
+      el('[data-meta]').textContent = L.items.length ? L.items.length + ' shown, ' + fmtBytes(totalSize) + (L.token ? ', more available' : '') : '';
+      drawSelection();
+    }
+
+    function drawSelection() {
+      const pick = L.items.filter(selectable);
+      const nSel = pick.filter(it => L.sel.has(it.id)).length;
+      const all = el('[data-all]');
+      all.checked = pick.length > 0 && nSel === pick.length;
+      all.indeterminate = nSel > 0 && nSel < pick.length;
+      all.disabled = !pick.length || L.busy;
+      if (!L.busy) {
+        const size = [...L.sel].reduce((a, id) => a + ((L.byId[id] || {}).size || 0), 0);
+        el('[data-sel]').innerHTML = L.sel.size ? '<b>' + L.sel.size + '</b> selected, <b>' + fmtBytes(size) + '</b>' : 'Nothing selected';
+      }
+      el('[data-act]').disabled = L.busy || !L.sel.size;
+    }
+
+    function badgeHtml(it) {
+      const s = statusOf(it);
+      if (!s) return '';
+      const meta = STATUS[s] || { label: s, tone: 'grey' };
+      const title = L.status[it.id] ? L.status[it.id].detail : (it.pendingTo ? 'Waiting for ' + it.pendingTo : '');
+      return '<span class="badge t-' + meta.tone + '" title="' + esc(title || '') + '">' + esc(meta.label) + '</span>';
+    }
+
+    function thumbHtml(it) {
+      const icon = it.folder ? ICON_FOLDER : (/^video\//.test(it.mime) ? ICON_VIDEO : (/^image\//.test(it.mime) ? ICON_IMAGE : ICON_FILE));
+      const img = it.thumb ? '<img src="' + esc(it.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '';
+      return '<span class="thumb">' + icon + img + '</span>';
+    }
+
+    function checkHtml(it) {
+      const can = selectable(it) && !L.busy;
+      return '<input type="checkbox" class="ck" data-id="' + esc(it.id) + '"' + (L.sel.has(it.id) ? ' checked' : '') + (can ? '' : ' disabled') + ' aria-label="Select ' + esc(it.name) + '">';
+    }
+
+    function rowHtml(it) {
+      const on = L.sel.has(it.id), done = !selectable(it);
+      const sub = '<span class="sz">' + fmtBytes(it.size) + '</span>' +
+        (cfg.showOwner ? '<span>From ' + esc(it.owner) + '</span>' : '') +
+        (it.created ? '<span>' + esc(fmtDate(it.created)) + '</span>' : '');
+      return '<label class="frow' + (on ? ' is-on' : '') + (done ? ' is-done' : '') + '" data-row>' +
+        checkHtml(it) + thumbHtml(it) +
+        '<span class="fmain"><span class="fname" title="' + esc(it.name) + '">' + esc(it.name) + '</span><span class="fsub">' + sub + '</span></span>' +
+        badgeHtml(it) + '</label>';
+    }
+
+    function tileHtml(it) {
+      const on = L.sel.has(it.id), done = !selectable(it);
+      return '<label class="tile' + (on ? ' is-on' : '') + (done ? ' is-done' : '') + '" data-row>' +
+        checkHtml(it) +
+        (/^video\//.test(it.mime) ? '<span class="vid">Video</span>' : '') +
+        thumbHtml(it) + badgeHtml(it) +
+        '<span class="fmain"><span class="fname" title="' + esc(it.name) + '">' + esc(it.name) + '</span><span class="fsub"><span class="sz">' + fmtBytes(it.size) + '</span></span></span>' +
+        '</label>';
+    }
+
+    function say(kind, html) {
+      el('[data-msg]').innerHTML = html ? '<div class="note ' + kind + '">' + html + '</div>' : '';
+    }
+
+    draw();
+    return { activate: () => { if (!L.started) { L.started = true; fetchPage(true); } } };
+  }
+
+  function copyText(input, btn) {
+    input.select();
+    const done = () => btn.textContent = 'Copied';
+    if (navigator.clipboard) navigator.clipboard.writeText(input.value).then(done, () => { document.execCommand('copy'); done(); });
+    else { document.execCommand('copy'); done(); }
+  }
+
+  /* =========================== folder picker =========================== */
+  const selected = new Map(); // folder id -> { name, cb, row, ancestors }
+
+  /* ---- folder sizes: counted in the background, two at a time, each result kept for this visit ---- */
+  const sizeInfo = new Map();   // id -> { bytes, files, done }
+  const sizeEls = new Map();    // id -> [span, ...]
+  const sizeQueue = [];         // { id, state }
+  const sizeQueued = new Set();
+  let sizeActive = 0;
+  const SIZE_CONCURRENCY = 2;
+
+  function wantSize(id, span) {
+    if (!sizeEls.has(id)) sizeEls.set(id, []);
+    sizeEls.get(id).push(span);
+    paintSize(id);
+    const info = sizeInfo.get(id);
+    if ((info && info.done) || sizeQueued.has(id)) return;
+    sizeQueued.add(id);
+    sizeQueue.push({ id: id, state: null });
+    pumpSizes();
+  }
+
+  function pumpSizes() {
+    while (sizeActive < SIZE_CONCURRENCY && sizeQueue.length) {
+      const job = sizeQueue.shift();
+      sizeActive++;
+      run().withSuccessHandler(r => {
+        sizeActive--;
+        sizeInfo.set(job.id, { bytes: r.bytes, files: r.files, done: r.done });
+        if (r.done) sizeQueued.delete(job.id);
+        else sizeQueue.push({ id: job.id, state: r.state }); // big folder: keep counting after the others
+        paintSize(job.id);
+        renderTray();
+        pumpSizes();
+      }).withFailureHandler(() => {
+        sizeActive--;
+        sizeQueued.delete(job.id);
+        (sizeEls.get(job.id) || []).forEach(s => { s.className = 'tsize zero'; s.textContent = '—'; s.title = "Couldn't count this folder"; });
+        pumpSizes();
+      }).folderSize(job.id, job.state);
+    }
+  }
+
+  function paintSize(id) {
+    const info = sizeInfo.get(id);
+    (sizeEls.get(id) || []).forEach(s => {
+      if (!info) { s.className = 'tsize wait'; s.textContent = ''; s.title = 'Counting…'; return; }
+      s.className = 'tsize' + (info.bytes ? '' : ' zero') + (info.done ? '' : ' wait');
+      s.textContent = info.bytes ? fmtBytes(info.bytes) + (info.done ? '' : '+') : (info.done ? '0 B' : '');
+      s.title = info.files + ' file(s) you own' + (info.done ? '' : ', still counting');
+    });
+  }
+
+  function loadChildren(parentId, container, depth, ancestors) {
+    ancestors = ancestors || [];
+    run().withSuccessHandler(folders => {
+      container.innerHTML = '';
+      if (!folders.length) {
+        container.innerHTML = '<div class="tempty" style="--d:' + depth + '">' + (depth === 0 ? 'No folders in your Drive yet.' : 'No folders inside') + '</div>';
+        return;
+      }
+      folders.forEach(f => container.appendChild(makeNode(f, depth, ancestors)));
+    }).withFailureHandler(err => {
+      container.innerHTML = '<div class="note bad">' + esc(err.message || err) + '</div>';
+    }).listFolders(parentId);
+  }
+
+  function makeNode(f, depth, ancestors) {
+    const node = document.createElement('div');
+    node.setAttribute('role', 'treeitem');
+    const row = document.createElement('div');
+    row.className = 'trow';
+    row.style.setProperty('--d', depth);
+
+    const tw = document.createElement('button');
+    tw.className = 'tw'; tw.type = 'button'; tw.innerHTML = ICON_CHEVRON;
+    tw.setAttribute('aria-expanded', 'false');
+    tw.setAttribute('aria-label', 'Open ' + f.name);
+
+    const pick = document.createElement('label');
+    pick.className = 'tpick';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.className = 'ck';
+    const name = document.createElement('span');
+    name.className = 'tname'; name.textContent = f.name;
+    pick.appendChild(cb);
+    pick.insertAdjacentHTML('beforeend', ICON_FOLDER);
+    pick.appendChild(name);
+    row.append(tw, pick);
+    if (!f.ownedByMe) {
+      const n = document.createElement('span');
+      n.className = 'tnote'; n.textContent = 'Shared with you';
+      row.appendChild(n);
+    }
+    const sz = document.createElement('span');
+    row.appendChild(sz);
+    wantSize(f.id, sz);
+
+    const kids = document.createElement('div');
+    kids.className = 'hidden';
+    kids.setAttribute('role', 'group');
+    let loaded = false;
+    tw.onclick = () => {
+      const open = tw.getAttribute('aria-expanded') !== 'true';
+      tw.setAttribute('aria-expanded', String(open));
+      kids.classList.toggle('hidden', !open);
+      if (open && !loaded) {
+        loaded = true;
+        kids.innerHTML = '<div class="tload" style="--d:' + (depth + 1) + '"><span class="spinner"></span>Loading…</div>';
+        loadChildren(f.id, kids, depth + 1, ancestors.concat(f.id));
+      }
+    };
+    cb.onchange = () => {
+      if (cb.checked) selected.set(f.id, { name: f.name, cb: cb, row: row, ancestors: ancestors });
+      else selected.delete(f.id);
+      row.classList.toggle('is-on', cb.checked);
+      renderTray();
+    };
+    node.append(row, kids);
+    return node;
+  }
+
+  function renderTray() {
+    const tray = $('tray');
+    tray.innerHTML = '';
+    const count = document.createElement('span');
+    count.className = 'count';
+    if (selected.size) {
+      // add up selected folders, skipping any whose parent folder is also selected (no double counting)
+      let bytes = 0, partial = false;
+      selected.forEach((v, id) => {
+        if (v.ancestors.some(a => selected.has(a))) return;
+        const info = sizeInfo.get(id);
+        if (!info) { partial = true; return; }
+        bytes += info.bytes;
+        if (!info.done) partial = true;
+      });
+      count.innerHTML = selected.size + (selected.size === 1 ? ' folder selected' : ' folders selected') +
+        ', <span class="total">' + (bytes || !partial ? fmtBytes(bytes) + (partial ? '+' : '') : 'counting…') + '</span>';
+    } else {
+      count.textContent = 'Nothing selected yet';
+    }
+    tray.appendChild(count);
+    selected.forEach((v, id) => {
+      const pill = document.createElement('span');
+      pill.className = 'pill';
+      const label = document.createElement('span');
+      label.textContent = v.name;
+      const x = document.createElement('button');
+      x.type = 'button'; x.innerHTML = ICON_X;
+      x.setAttribute('aria-label', 'Remove ' + v.name);
+      x.onclick = () => { v.cb.checked = false; v.row.classList.remove('is-on'); selected.delete(id); renderTray(); };
+      pill.append(label, x);
+      tray.appendChild(pill);
+    });
+  }
+
+  /* =========================== folder jobs =========================== */
+  const TITLES = {
+    send:   ['Sending transfer requests', 'Transfer requests sent'],
+    accept: ['Accepting', 'Accepted'],
+    scan:   ['Checking status', 'Current status']
+  };
+  let items = [];
+  let filter = 'all';
+  let folderRunning = false;
+  $('search').addEventListener('input', debounce(renderTable, 150));
+
+  function begin(job, msgId, call) {
+    if (folderRunning) return;
+    folderRunning = true; anyBusy++;
+    setButtons(true);
+    $(msgId).innerHTML = '';
+    call(run().withSuccessHandler(state => {
+      items = []; filter = 'all'; $('search').value = '';
+      resultsUsed = true;
+      $('results').classList.remove('hidden');
+      $('doneBox').classList.add('hidden'); $('doneBox').innerHTML = '';
+      $('resTitle').textContent = TITLES[job][0];
+      $('resProgress').innerHTML = '<span class="spinner"></span>Keep this tab open';
+      render(state);
+      $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      loop(state);
+    }).withFailureHandler(err => {
+      folderRunning = false; anyBusy--; setButtons(false);
+      $(msgId).innerHTML = '<div class="note bad">' + esc(err.message || err) + '</div>';
+    }));
+  }
+
+  function loop(state) {
+    if (state.items && state.items.length) { items.push(...state.items); state.items = []; }
+    render(state);
+    if (state.done) return finish(state);
+    run().withSuccessHandler(loop).withFailureHandler(err => {
+      folderRunning = false; anyBusy--; setButtons(false);
+      $('resTitle').textContent = 'Stopped';
+      $('resProgress').textContent = '';
+      showDone('<div class="note bad">' + esc(err.message || err) + '<br>Run it again. Finished items are skipped.</div>');
+    }).runBatch(state);
+  }
+
+  function finish(state) {
+    folderRunning = false; anyBusy--; setButtons(false);
+    loadStorage();
+    $('resTitle').textContent = TITLES[state.job][1];
+    $('resProgress').textContent = 'Done';
+    const c = counts();
+    const link = APP_URL + '?accept=' + encodeURIComponent(state.roots.join(','));
+    const linkHtml =
+      '<p style="margin:18px 0 0"><b>Link for the receiving account.</b> Open it while signed in there to accept these folders and everything in them at once.</p>' +
+      '<div class="linkbox"><input type="text" id="acceptLink" readonly value="' + esc(link) + '"><button class="btn btn-quiet" id="copyBtn">Copy link</button></div>' +
+      '<p class="muted">They can also open the app and use "Waiting for you", or search <code>pendingowner:me</code> in their Google Drive.</p>';
+
+    let html = '';
+    if (state.job === 'send') {
+      html = '<div class="note good">Sent ' + (c.requested || 0) + ' new request(s) to <b>' + esc(state.recipient) + '</b>. Nothing moves until they accept.</div>' + linkHtml;
+    } else if (state.job === 'accept') {
+      html = '<div class="note good">' + (c.accepted || 0) + ' item(s) are now yours. The other account\'s storage can take a few hours to update, and it should empty its trash.</div>';
+    } else if (state.view === 'send') {
+      html = '<p class="muted" style="margin-top:14px"><b>Pending acceptance</b> means the request is out and waiting on the other account. <b>Not requested yet</b> means it\'s still yours with nothing sent. ' +
+             (state.recipient ? '' : 'Fill in "Send to" before checking to also see what\'s already <b>Transferred</b>.') + '</p>' +
+             ((c.pending || 0) ? linkHtml : '');
+    } else {
+      html = (c.waiting || 0)
+        ? '<div class="note good">' + c.waiting + ' item(s) waiting for you. Select <b>Accept all</b> to take them.</div>'
+        : '<div class="note good">Nothing is waiting for you in these folders.</div>';
+    }
+    showDone(html);
+    if ($('copyBtn')) $('copyBtn').onclick = () => copyText($('acceptLink'), $('copyBtn'));
+  }
+
+  function showDone(html) { const b = $('doneBox'); b.innerHTML = html; b.classList.remove('hidden'); }
+
+  function setButtons(disabled) {
+    ['sendBtn', 'scanBtn', 'acceptBtn', 'acceptScanBtn'].forEach(id => { if ($(id)) $(id).disabled = disabled; });
+  }
+
+  function counts() {
+    const c = {};
+    items.forEach(i => c[i.status] = (c[i.status] || 0) + 1);
+    return c;
+  }
+
+  function render(state) {
+    const c = counts();
+    $('resFolders').textContent = state.foldersScanned + ' folder(s) scanned';
+    $('resTotal').textContent = items.length + ' item(s)';
+    const chips = [['all', 'All', items.length]].concat(
+      Object.keys(STATUS).filter(k => c[k]).map(k => [k, STATUS[k].label, c[k]])
+    );
+    if (filter !== 'all' && !c[filter]) filter = 'all';
+    $('chips').innerHTML = chips.map(([k, label, n]) =>
+      '<button class="chip' + (k === filter ? ' active' : '') + '" data-k="' + k + '">' + esc(label) + '<span class="n">' + n + '</span></button>'
+    ).join('');
+    $('chips').querySelectorAll('.chip').forEach(b => b.onclick = () => { filter = b.dataset.k; render(state); });
+    renderTable();
+  }
+
+  function renderTable() {
+    const q = $('search').value.trim().toLowerCase();
+    const list = items.filter(i => (filter === 'all' || i.status === filter) && (!q || i.name.toLowerCase().includes(q)));
+    $('rows').innerHTML = list.slice(0, MAX_ROWS).map(i => {
+      const s = STATUS[i.status] || { label: i.status, tone: 'grey' };
+      return '<tr><td class="nm">' + (i.folder ? ICON_FOLDER : ICON_FILE) +
+        '<a href="https://drive.google.com/open?id=' + encodeURIComponent(i.id) + '" target="_blank" rel="noopener">' + esc(i.name) + '</a></td>' +
+        '<td><span class="badge t-' + s.tone + '">' + esc(s.label) + '</span></td>' +
+        '<td class="dt">' + esc(i.detail) + '</td></tr>';
+    }).join('') || '<tr><td colspan="3" class="muted">' + (items.length ? 'No items match.' : 'Nothing yet') + '</td></tr>';
+    $('rowNote').textContent = list.length > MAX_ROWS ? 'Showing the first ' + MAX_ROWS + ' of ' + list.length + '. Filter or search to narrow it down.' : '';
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+</script>
+</body>
+</html>
