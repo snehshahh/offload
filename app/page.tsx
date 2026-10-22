@@ -172,8 +172,14 @@ export default function Home() {
             </ul>
           </section>
 
-          <section id="faq" className="block" aria-labelledby="faq-title">
-            <h2 id="faq-title">Questions</h2>
+          <section id="faq" className="block faq-block" aria-labelledby="faq-title">
+            <div className="faq-side">
+              <h2 id="faq-title">Questions</h2>
+              <p>Everything people ask before moving their files. Still unsure? Try it on one small folder first.</p>
+              <a className="btn btn-main" href={APP_URL}>
+                Open Offload
+              </a>
+            </div>
             <div className="faq">
               {FAQS.map(({ q, a }) => (
                 <details key={q}>
