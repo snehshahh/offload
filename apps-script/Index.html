@@ -198,6 +198,42 @@
     .flist.grid { grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); }
     .frow .badge { display:none; }
   }
+
+  /* ---------- motion (switched off by the reduced-motion rule above) ---------- */
+  @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  @keyframes pop { from { opacity:0; transform:scale(.8); } to { opacity:1; transform:none; } }
+  @keyframes slide-open { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+  @keyframes run-strip { from { background-position:200% 0; } to { background-position:-200% 0; } }
+  @keyframes tick { 0% { transform:scale(.6); } 60% { transform:scale(1.12); } 100% { transform:scale(1); } }
+  header { animation:rise .5s cubic-bezier(.2,.8,.2,1) both; }
+  .panel, .tabs { animation:rise .45s cubic-bezier(.2,.8,.2,1) both; }
+  .wrap > :nth-child(2) { animation-delay:.04s; }
+  .wrap > :nth-child(3) { animation-delay:.08s; }
+  .wrap > :nth-child(4) { animation-delay:.12s; }
+  .wrap > :nth-child(5) { animation-delay:.16s; }
+  .wrap > div > .panel { animation-delay:.14s; }
+  .picker [role="group"]:not(.hidden) { animation:slide-open .22s ease both; }
+  .pill { animation:pop .18s cubic-bezier(.2,.8,.2,1) both; }
+  .tpick .ck:checked, .selall .ck:checked, .opt .ck:checked { animation:tick .22s ease; }
+  .note { animation:rise .3s cubic-bezier(.2,.8,.2,1) both; }
+  .badge { transition:background-color .25s, color .25s; }
+  .btn-main { transition:background .15s, transform .08s, box-shadow .15s; }
+  .btn-main:not(:disabled):hover { box-shadow:0 6px 16px -8px rgba(47,111,98,.7); }
+  .tab { transition:background .18s, color .18s, box-shadow .18s; }
+  .chip { transition:background .15s, color .15s, border-color .15s; }
+  .tile .thumb img { transition:transform .35s cubic-bezier(.2,.8,.2,1); }
+  .tile:hover .thumb img { transform:scale(1.05); }
+  .tile { transition:background .12s, transform .18s; }
+  .tile:hover { transform:translateY(-2px); }
+  .frow, .trow { transition:background .15s; }
+  .st-text b { font-variant-numeric:tabular-nums; }
+  .st-text.is-loading { opacity:.55; transition:opacity .2s; }
+  /* moving strip across the top of anything that's working */
+  .panel { position:relative; overflow:hidden; }
+  .panel.is-running::before { content:""; position:absolute; left:0; right:0; top:0; height:3px;
+    background:linear-gradient(90deg, transparent 0%, var(--teal) 30%, #8FC4B6 50%, var(--teal) 70%, transparent 100%);
+    background-size:200% 100%; animation:run-strip 1.4s linear infinite; }
+  @media (prefers-reduced-motion: reduce) { .panel.is-running::before { background:var(--teal); } }
 </style>
 </head>
 <body>
@@ -353,28 +389,50 @@
     return isNaN(d) ? '' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
+  let lastUsage = null;
+  function countUp(el, from, to, render) {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || from === null || from === to) { el.textContent = render(to); return; }
+    const t0 = performance.now(), dur = 700;
+    const step = now => {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = render(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
   const loadStorage = debounce(() => {
-    $('storageText').textContent = 'Loading…';
+    const st = $('storageText');
+    if (lastUsage === null) st.textContent = 'Loading…'; else st.classList.add('is-loading');
     run().withSuccessHandler(s => {
+      st.classList.remove('is-loading');
       const other = Math.max(0, s.usage - s.drive - s.trash);
       const driveOnly = Math.max(0, s.drive - s.trash);
       const total = s.limit || s.usage || 1;
       const pct = v => Math.min(100, (v / total) * 100).toFixed(2) + '%';
       const used = s.limit ? Math.round((s.usage / s.limit) * 100) : null;
       const freeTxt = s.limit ? fmtBytes(Math.max(0, s.limit - s.usage)) + ' free' : 'Unlimited';
-      $('storageText').innerHTML = '<b>' + fmtBytes(s.usage) + '</b> used' +
+      st.innerHTML = '<b></b> used' +
         (s.limit ? ' of ' + fmtBytes(s.limit) + ', ' : ', ') +
         '<span class="' + (used !== null && used >= 90 ? 'st-warn' : '') + '">' + freeTxt + '</span>';
-      $('storageBar').innerHTML =
-        '<span class="seg-drive" style="width:' + pct(driveOnly) + '"></span>' +
-        '<span class="seg-trash" style="width:' + pct(s.trash) + '"></span>' +
-        '<span class="seg-other" style="width:' + pct(other) + '"></span>';
+      countUp(st.querySelector('b'), lastUsage, s.usage, fmtBytes);
+      lastUsage = s.usage;
+      const bar = $('storageBar');
+      if (!bar.children.length) {
+        bar.innerHTML = '<span class="seg-drive" style="width:0"></span><span class="seg-trash" style="width:0"></span><span class="seg-other" style="width:0"></span>';
+        void bar.offsetWidth; // let the bar start empty so it fills in
+      }
+      bar.children[0].style.width = pct(driveOnly);
+      bar.children[1].style.width = pct(s.trash);
+      bar.children[2].style.width = pct(other);
       $('storageLegend').innerHTML =
         '<span><i class="seg-drive"></i>Drive ' + fmtBytes(driveOnly) + '</span>' +
         '<span><i class="seg-trash"></i>Trash ' + fmtBytes(s.trash) + '</span>' +
         '<span><i class="seg-other"></i>Gmail and Photos ' + fmtBytes(other) + '</span>';
     }).withFailureHandler(err => {
-      $('storageText').textContent = "Couldn't load storage: " + (err.message || err);
+      st.classList.remove('is-loading');
+      st.textContent = "Couldn't load storage: " + (err.message || err);
     }).getStorage();
   }, 300);
   loadStorage();
@@ -624,6 +682,7 @@
         el('[data-sel]').innerHTML = L.sel.size ? '<b>' + L.sel.size + '</b> selected, <b>' + fmtBytes(size) + '</b>' : 'Nothing selected';
       }
       el('[data-act]').disabled = L.busy || !L.sel.size;
+      root.classList.toggle('is-running', L.busy || (L.loading && !!L.items.length));
     }
 
     function badgeHtml(it) {
@@ -860,12 +919,13 @@
       $('results').classList.remove('hidden');
       $('doneBox').classList.add('hidden'); $('doneBox').innerHTML = '';
       $('resTitle').textContent = TITLES[job][0];
+      $('results').classList.add('is-running');
       $('resProgress').innerHTML = '<span class="spinner"></span>Keep this tab open';
       render(state);
       $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
       loop(state);
     }).withFailureHandler(err => {
-      folderRunning = false; anyBusy--; setButtons(false);
+      folderRunning = false; anyBusy--; setButtons(false); $('results').classList.remove('is-running');
       $(msgId).innerHTML = '<div class="note bad">' + esc(err.message || err) + '</div>';
     }));
   }
@@ -875,7 +935,7 @@
     render(state);
     if (state.done) return finish(state);
     run().withSuccessHandler(loop).withFailureHandler(err => {
-      folderRunning = false; anyBusy--; setButtons(false);
+      folderRunning = false; anyBusy--; setButtons(false); $('results').classList.remove('is-running');
       $('resTitle').textContent = 'Stopped';
       $('resProgress').textContent = '';
       showDone('<div class="note bad">' + esc(err.message || err) + '<br>Run it again. Finished items are skipped.</div>');
@@ -883,7 +943,7 @@
   }
 
   function finish(state) {
-    folderRunning = false; anyBusy--; setButtons(false);
+    folderRunning = false; anyBusy--; setButtons(false); $('results').classList.remove('is-running');
     loadStorage();
     $('resTitle').textContent = TITLES[state.job][1];
     $('resProgress').textContent = 'Done';
