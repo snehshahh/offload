@@ -151,6 +151,28 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
 .prose h2 { font-size:22px; margin:36px 0 8px; }
 .prose p { color:var(--ink-2); margin:0 0 14px; }
 .fine { color:var(--muted); font-size:14px; }
+.prose ul, .prose ol { color:var(--ink-2); margin:0 0 16px; padding-left:1.4em; }
+.prose li { margin:0 0 6px; padding-left:2px; }
+.prose code { font:0.88em/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--slate-soft); color:var(--ink); padding:2px 6px; border-radius:6px; overflow-wrap:anywhere; }
+.prose b { color:var(--ink); }
+.note { background:var(--teal-soft); color:var(--teal-deep) !important; border-radius:14px; padding:14px 18px; margin:24px 0 !important; }
+
+/* blog */
+.blog-head { padding:32px 0 44px; max-width:760px; }
+.blog-head h1 { font-size:clamp(38px, 5vw, 56px); }
+.blog-head .lede { margin:0; }
+.post-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+.post-card { display:flex; flex-direction:column; gap:8px; background:var(--surface); border-radius:20px; padding:24px; text-decoration:none; color:var(--ink); transition:transform .12s, box-shadow .12s; }
+.post-card:hover { transform:translateY(-2px); box-shadow:0 18px 40px -26px rgba(29,42,51,.45); }
+.post-card h3 { margin:0; }
+.post-card p { margin:0; color:var(--ink-2); font-size:15.5px; flex:1; }
+.post-meta { color:var(--muted); font-size:14px; }
+.post { padding-bottom:56px; }
+.post h1 { margin-bottom:10px; }
+.post .post-meta { margin:0 0 22px; }
+.post-lede { font-size:20px; color:var(--ink-2); margin:0 0 8px; }
+.crumbs { font-size:14px; color:var(--muted); margin-bottom:18px; }
+.crumbs a { color:var(--teal-deep); text-decoration:none; font-weight:600; }
 
 /* footer */
 .foot { border-top:1px solid var(--hair); padding:32px 0 44px; color:var(--muted); font-size:14px; }
@@ -163,7 +185,7 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
 .foot p { margin:0; max-width:70ch; }
 
 @media (max-width:1020px) {
-  .features { grid-template-columns:repeat(2, 1fr); }
+  .features, .post-grid { grid-template-columns:repeat(2, 1fr); }
 }
 @media (max-width:900px) {
   .hero { grid-template-columns:1fr; gap:40px; padding-top:20px; }
@@ -178,7 +200,8 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
   .wrap { padding:0 16px; }
   body { font-size:16px; }
   .lede { font-size:18px; }
-  .features { grid-template-columns:1fr; }
+  .features, .post-grid { grid-template-columns:1fr; }
+  .post-lede { font-size:18px; }
   .demo { padding:16px; border-radius:22px; }
   .demo-meters { grid-template-columns:1fr; }
   .demo-arrow { transform:rotate(90deg); justify-self:center; }

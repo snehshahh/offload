@@ -12,6 +12,7 @@ export function Header() {
         <a href="/#how">How it works</a>
         <a href="/#gmail">Gmail cleanup</a>
         <a href="/#faq">Questions</a>
+        <Link href="/blog">Blog</Link>
         <a className="btn btn-main" href={APP_URL}>
           Open Offload
         </a>
@@ -30,6 +31,7 @@ export function Footer() {
           <a href="/#how">How it works</a>
           <a href="/#gmail">Gmail cleanup</a>
           <a href="/#faq">Questions</a>
+          <Link href="/blog">Blog</Link>
           <Link href="/privacy">Privacy</Link>
           <a href={APP_URL}>Open Offload</a>
         </nav>

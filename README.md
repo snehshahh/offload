@@ -8,9 +8,10 @@ Pick whole folders, your largest files, or photos and videos, and hand them over
 
 | Path | What it is |
 | --- | --- |
-| `app/`, `components/`, `lib/` | The landing site (Next.js), deployed on Vercel. Landing page, privacy page, SEO metadata, sitemap, robots and manifest. |
+| `app/`, `components/`, `lib/` | The landing site (Next.js), deployed on Vercel. Landing page, blog (posts live in `lib/posts.ts`), privacy page, SEO metadata, sitemap, robots and manifest. |
 | `apps-script/` | The app itself: `Code.gs`, `Index.html` and `appsscript.json` for a Google Apps Script project. |
 | `brand/` | Logo, profile picture and banners for LinkedIn, X and link previews. |
+| `public/google0aa1b7412de3fcf6.html` | Google Search Console ownership verification. Keep it, or the site loses verification. |
 
 ## Landing site
 
