@@ -1,3 +1,5 @@
+import { SITE_URL } from "@/lib/site";
+
 /**
  * Blog posts. Body text supports [links](/path), **bold** and `code`; a link to "app" opens Offload.
  */
@@ -48,6 +50,58 @@ export const POSTS: Post[] = [
       { h2: "6. Remember what doesn’t count" },
       { p: "Files other people shared with you don’t use your storage; only files you own do. So there’s no need to remove things from **Shared with me** to free space." },
       { note: "Freed space can take up to a day to show up in Google’s storage figures. If the number hasn’t moved, give it a few hours before trying anything else. [Here’s what else can keep storage full](/blog/google-storage-still-full-after-deleting)." },
+    ],
+  },
+  {
+    slug: "move-google-drive-files-with-claude",
+    title: "Move Google Drive files to your other account by asking Claude",
+    description:
+      "Add Offload to Claude, link both Google accounts, and free up storage from the chat: ask what’s using space, where a file is, or to move a folder across.",
+    topic: "Drive",
+    date: "2026-11-04",
+    keywords: ["move Google Drive files with Claude", "Claude Google Drive connector", "Offload for Claude", "transfer Google Drive ownership with AI", "Claude MCP Google Drive"],
+    body: [
+      { p: "Offload now works inside Claude. Add it as a connector, link your two Google accounts once, and you can free up storage by asking in plain words instead of ticking boxes. Claude finds the files, tells you what it’s about to move and how much it frees, and moves them when you say so." },
+      { p: "The big difference from doing it by hand: the receiving account accepts each transfer automatically. Nobody has to sign in to the other account and click **Accept**." },
+      { h2: "What you can ask" },
+      { ul: [
+        "“What’s taking up space in my Drive?”",
+        "“Show me every video over 500 MB in my main account.”",
+        "“How big is my Camera Uploads folder?”",
+        "“Move the Videos/2023 folder to my other account.”",
+        "“Where’s my wedding video now?”",
+        "“What did I move to my archive account this week?”",
+        "“Move that last folder back to my main account.”",
+      ] },
+      { h2: "Set it up" },
+      { ol: [
+        `Copy Offload’s connector address: \`${SITE_URL}/mcp\`.`,
+        "In Claude, open **Settings**, then **Connectors**, and choose **Add custom connector**. Paste the address and save.",
+        "Select **Connect**. Offload asks you to sign in twice: first with the account that’s running out of space, then with the account that receives the files.",
+        "Back in Claude, start a new chat and ask away.",
+      ] },
+      { p: "Google may warn that the app isn’t verified. [Here’s why, and what Offload can access](/blog/google-app-not-verified-offload). If you don’t see **Add custom connector**, your Claude plan may not include custom connectors." },
+      { h2: "What happens when Claude moves files" },
+      { p: "Offload uses Google Drive’s own ownership transfer, the same thing as **Share → Transfer ownership** in Drive, just for many files at once. Because both accounts are linked, the account that’s full sends the request and the other account accepts it in the same step." },
+      { ul: [
+        "Whole folders come over with their subfolders, and the structure stays as it was.",
+        "Files that arrive without their folder are gathered into **Transferred from** plus the sender’s address, in the receiving account’s My Drive.",
+        "The sending account keeps edit access, so shared links and edit history keep working.",
+        "Nothing is copied or deleted, so nothing is lost. A move can be undone by asking Claude to move it back.",
+        "Big folders move in steps; Claude carries on by itself and tells you how far it has got.",
+      ] },
+      { h2: "It knows which account a file is in" },
+      { p: "Each file belongs to exactly one account, the one whose storage it uses. When you ask where something is, Claude searches both accounts at once and tells you which one has it. Everything Offload moves is also labelled with the account it came from and the date, so you can ask later what moved where." },
+      { h2: "What it doesn’t do" },
+      { ul: [
+        "It only moves files the account owns. Files other people shared with you don’t use your storage anyway, and they’re left alone.",
+        "It works with personal Google accounts. Work and school accounts usually block transfers outside their organisation.",
+        "In Claude it handles Google Drive. For [Gmail cleanup](/blog/gmail-storage-full) and [copying Google Photos](/blog/move-google-photos-to-another-account), use the [Offload app](app).",
+      ] },
+      { h2: "Privacy" },
+      { p: "Offload keeps no database. The sign-ins for your two accounts are encrypted and held by Claude as part of the connection; Offload opens them only while it carries out your request. File names and sizes pass through to Claude so it can show them to you, and file contents are never read." },
+      { p: "To disconnect, remove Offload in Claude’s connector settings. To revoke it completely, also remove Offload from each Google account’s third-party access settings." },
+      { note: "Trying it for the first time? Ask Claude to move one small folder, check it arrived in the other account, then go for the big ones. Google can take a few hours to update the storage figures. [Here’s why storage can look full after you’ve freed it](/blog/google-storage-still-full-after-deleting)." },
     ],
   },
   {
