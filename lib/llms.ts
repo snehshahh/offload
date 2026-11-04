@@ -42,6 +42,8 @@ function header() {
     "",
     `${SITE_NAME} is a free Google storage manager. When a Google account runs out of its free 15 GB, ${SITE_NAME} moves Drive files, folders and photos to another Google account the same person owns, and clears out Gmail in bulk, so the space is shared across accounts instead of paying for more.`,
     "",
+    `It works as a web app, and as a connector that turns ChatGPT, Claude and other AI assistants into an AI storage manager for all of a person's Google accounts: the assistant can check each account's storage and what's using it, find files across accounts, measure folders, and move files and folders between accounts, asking before anything changes.`,
+    "",
     "## Key facts",
     "",
     ...KEY_FACTS.map((f) => `- ${f}`),

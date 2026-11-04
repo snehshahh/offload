@@ -28,7 +28,8 @@ const jsonLd = {
 };
 
 export default function Blog() {
-  const latest = [...POSTS].sort((a, b) => b.date.localeCompare(a.date))[0];
+  const featured = POSTS.find((p) => p.featured);
+  const latest = featured ?? [...POSTS].sort((a, b) => b.date.localeCompare(a.date))[0];
   return (
     <div className="site">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -46,7 +47,7 @@ export default function Blog() {
             <Link href={`/blog/${latest.slug}`} className="post-card featured">
               <PostCover post={latest} />
               <div className="post-card-body">
-                <span className="side-topic">Latest</span>
+                <span className="side-topic">{featured ? "Start here" : "Latest"}</span>
                 <h3>{latest.title}</h3>
                 <span className="post-meta">
                   {formatDate(latest.date)} · {readingMinutes(latest)} min read

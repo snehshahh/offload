@@ -66,6 +66,40 @@ function Storage({ v }: { v: number }) {
         <circle cx="160" cy="90" r="38" fill="none" stroke="#E6DFCB" strokeWidth="22" strokeDasharray="0 190 49 239" transform="rotate(-90 160 90)" />
       </>
     );
+  if (v === 4)
+    // five accounts, each with its own meter
+    return (
+      <>
+        {[0.94, 0.5, 0.3, 0.62, 0.2].map((f, i) => (
+          <g key={i}>
+            <rect x={40 + i * 50} y="40" width="40" height="100" rx="10" fill={PAPER} />
+            <rect x={52} y={52} width="16" height="76" rx="8" fill="#F1EBD9" transform={`translate(${i * 50} 0)`} />
+            <rect x={52 + i * 50} y={52 + 76 * (1 - f)} width="16" height={76 * f} rx="8" fill={f > 0.9 ? RED : INK} />
+          </g>
+        ))}
+      </>
+    );
+  if (v === 5)
+    // a comparison table
+    return (
+      <>
+        <rect x="56" y="34" width="208" height="112" rx="16" fill={PAPER} />
+        {[0, 1, 2].map((r) => (
+          <g key={r}>
+            <rect x="74" y={54 + r * 30} width="70" height="9" rx="4.5" fill="#E6DFCB" />
+            {[0, 1, 2].map((c) => {
+              const yes = c === 2 || (r === 0 && c === 0);
+              return yes ? (
+                <path key={c} d={`M${170 + c * 30} ${58 + r * 30}l5 5 9-10`} fill="none" stroke={INK} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+              ) : (
+                <rect key={c} x={170 + c * 30} y={57 + r * 30} width="14" height="4" rx="2" fill="#E6DFCB" />
+              );
+            })}
+          </g>
+        ))}
+        <rect x="224" y="44" width="30" height="94" rx="8" fill="none" stroke={RED} strokeWidth="3" />
+      </>
+    );
   if (v === 3)
     // a padlock: what Offload can and can't see
     return (
@@ -203,6 +237,50 @@ function Photos({ v }: { v: number }) {
 }
 
 function AI({ v }: { v: number }) {
+  if (v === 8)
+    // a storage dashboard with a chat bubble
+    return (
+      <>
+        <rect x="44" y="40" width="168" height="104" rx="16" fill="#2E2C26" />
+        {[0.95, 0.55, 0.3].map((f, i) => (
+          <g key={i}>
+            <rect x="62" y={60 + i * 26} width="132" height="10" rx="5" fill="#46433A" />
+            <rect x="62" y={60 + i * 26} width={132 * f} height="10" rx="5" fill={f > 0.9 ? RED : SUN} />
+          </g>
+        ))}
+        <rect x="186" y="104" width="96" height="40" rx="20" fill={SUN} />
+        <rect x="204" y="120" width="56" height="8" rx="4" fill={INK} opacity=".55" />
+      </>
+    );
+  if (v === 9)
+    // one bar split into Drive, trash, Gmail and Photos
+    return (
+      <>
+        <rect x="44" y="66" width="232" height="36" rx="18" fill="#2E2C26" />
+        <path d="M62 66h96v36H62a18 18 0 0 1 0-36Z" fill={SUN} />
+        <rect x="158" y="66" width="22" height="36" fill="#736F5D" />
+        <rect x="180" y="66" width="44" height="36" fill={RED} />
+        <rect x="224" y="66" width="22" height="36" fill="#FBF1DE" />
+        {[SUN, "#736F5D", RED, "#FBF1DE"].map((c, i) => (
+          <g key={i}>
+            <circle cx={60 + i * 58} cy="128" r="6" fill={c} />
+            <rect x={72 + i * 58} y="124" width="30" height="8" rx="4" fill="#46433A" />
+          </g>
+        ))}
+      </>
+    );
+  if (v === 10)
+    // a calendar page with a tick
+    return (
+      <>
+        <rect x="100" y="38" width="120" height="110" rx="16" fill={PAPER} />
+        <rect x="100" y="38" width="120" height="30" rx="16" fill={SUN} />
+        <rect x="100" y="54" width="120" height="14" fill={SUN} />
+        <rect x="126" y="28" width="10" height="22" rx="5" fill="#E6DFCB" />
+        <rect x="184" y="28" width="10" height="22" rx="5" fill="#E6DFCB" />
+        <path d="M136 108l16 16 32-34" fill="none" stroke={INK} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    );
   if (v === 2)
     // a settings switch, turned on
     return (
