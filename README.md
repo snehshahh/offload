@@ -11,6 +11,7 @@ Pick whole folders, your largest files, or photos and videos, and hand them over
 | `app/`, `components/`, `lib/` | The site (Next.js), deployed on Vercel. Landing page, blog (posts live in `lib/posts.ts`), privacy page, SEO metadata, sitemap, robots and manifest. |
 | `app/app`, `components/app`, `lib/drive/`, `lib/gmail/`, `lib/photos/`, `app/api/photos/` | The Offload web app at `/app`: Drive, Gmail cleanup and Google Photos, running in the browser, plus the photo relay. `lib/drive/engine.ts` is shared with the connector. |
 | `app/mcp`, `app/oauth`, `app/.well-known`, `lib/mcp/` | The MCP connector, so people can move files by asking Claude, ChatGPT or any app that supports remote MCP connectors. Runs on the same Vercel deployment. |
+| `app/llms.txt`, `app/llms-full.txt`, `lib/llms.ts` | `/llms.txt` and `/llms-full.txt`: Markdown summaries of the site for ChatGPT, Claude, Perplexity and other AI search. Built from the posts and FAQs, so new posts appear automatically. |
 | `brand/` | Logo, profile picture and banners for LinkedIn, X and link previews. |
 | `public/google0aa1b7412de3fcf6.html` | Google Search Console ownership verification. Keep it, or the site loses verification. |
 
