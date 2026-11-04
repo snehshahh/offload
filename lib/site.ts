@@ -13,8 +13,12 @@ export const SITE_URL = (() => {
   return "http://localhost:3000";
 })();
 
-/** The Offload app (Google Apps Script web app). Set NEXT_PUBLIC_APP_URL when you deploy a new version. */
-export const APP_URL =
+/** The Offload web app, on this site. Every "Open Offload" button links here. */
+export const APP_URL = "/app";
+
+/** The classic Google Apps Script app, linked from the web app as a fallback. */
+export const CLASSIC_APP_URL =
+  process.env.NEXT_PUBLIC_CLASSIC_APP_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
   "https://script.google.com/macros/s/AKfycbyWOVB_xmZ5VivLYiY6_wk1kyqIDwlzB6RDjTzhjxypJreil_V7naw8giFFXvLr4y5oeA/exec";
 
@@ -25,7 +29,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Where do my files go? Can anyone else see them?",
-    a: "Your files stay inside Google the whole time. Offload uses Google Drive's own ownership transfer, so files go straight from one of your accounts to the other. They never pass through any other server, and the developer can't see them.",
+    a: "Your Drive files stay inside Google the whole time. Offload uses Google Drive's own ownership transfer, so files go straight from one of your accounts to the other, and the developer can't see them. The one exception is copying Google Photos: each photo passes through Offload's server in pieces on its way to your other account, without being stored or looked at.",
   },
   {
     q: "Why does Google say the app isn't verified?",
@@ -41,7 +45,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Does the other account have to accept?",
-    a: "Yes. Google requires the receiving account to accept every transfer. In Offload, the receiving account opens Waiting for you and accepts everything at once. Loose files are tidied into a folder named after the account they came from.",
+    a: "Yes, Google requires it, but you don't have to do anything: you sign in to Offload with both accounts, so the receiving account accepts each transfer automatically. Loose files are tidied into a folder named after the account they came from.",
   },
   {
     q: "Will it free up space straight away?",

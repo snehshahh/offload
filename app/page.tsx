@@ -51,16 +51,16 @@ const jsonLd = {
 
 const STEPS = [
   {
+    title: "Sign in with your accounts",
+    body: "Open Offload and sign in with the account that’s full, then your other one. You can link up to five, and each shows how much space it has left.",
+  },
+  {
     title: "Pick what to move",
-    body: "Open Offload with the account that’s full. Choose whole folders, your biggest files, or photos and videos. Every folder shows its size, so you know exactly how much you’ll free.",
+    body: "Choose whole folders, your biggest files, or photos and videos. Every folder shows its size, so you know exactly how much you’ll free.",
   },
   {
-    title: "Send it to your other account",
-    body: "Type the Gmail address you’re moving to and send. Offload asks Google to transfer ownership of every file, subfolders included. No emails flood the other inbox unless you want them.",
-  },
-  {
-    title: "Accept, and the space is yours",
-    body: "Open Offload as the receiving account and accept everything in one go. The files now count against that account, and the first one has room to breathe.",
+    title: "Move it, and the space is yours",
+    body: "Offload hands ownership over and the other account accepts it straight away, subfolders included. The files now count against that account, and the first one has room to breathe.",
   },
 ];
 
@@ -249,13 +249,14 @@ export default function Home() {
               <p className="lede">
                 Offload stores none of your files. For Drive it asks Google to change who owns your files, the
                 same thing you could do one file at a time in Drive&rsquo;s share settings, just thousands at once. Gmail cleanup
-                and Google Photos copies happen inside Google too.
+                happens inside Google too. Only Google Photos copies pass through Offload&rsquo;s server, in pieces, without
+                being stored.
               </p>
             </div>
             <ul className="trust">
               <li>
-                <h3>Runs in your own account</h3>
-                <p>Offload is a Google Apps Script app that runs under the Google account you sign in with.</p>
+                <h3>Runs in your browser</h3>
+                <p>Offload talks to Google straight from your browser, signed in as you. Your sign-in never reaches our server.</p>
               </li>
               <li>
                 <h3>No database</h3>

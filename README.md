@@ -27,7 +27,7 @@ Environment variables (all optional):
 
 | Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_APP_URL` | The Apps Script web app URL that every "Open Offload" button links to. |
+| `NEXT_PUBLIC_CLASSIC_APP_URL` | The classic Apps Script app, linked from the web app as a fallback (`NEXT_PUBLIC_APP_URL` still works for this). Every "Open Offload" button goes to `/app`. |
 | `NEXT_PUBLIC_SITE_URL` | The site's public address, for a custom domain. On Vercel, the production address is used automatically. |
 
 ## Run the app yourself
