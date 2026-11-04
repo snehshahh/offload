@@ -203,6 +203,76 @@ function Photos({ v }: { v: number }) {
 }
 
 function AI({ v }: { v: number }) {
+  if (v === 2)
+    // a settings switch, turned on
+    return (
+      <>
+        <rect x="60" y="44" width="200" height="92" rx="18" fill="#2E2C26" />
+        <rect x="80" y="66" width="76" height="9" rx="4.5" fill="#736F5D" />
+        <rect x="80" y="84" width="50" height="9" rx="4.5" fill="#46433A" />
+        <rect x="180" y="62" width="60" height="34" rx="17" fill={SUN} />
+        <circle cx="223" cy="79" r="12" fill={INK} />
+        <rect x="80" y="110" width="110" height="9" rx="4.5" fill="#46433A" />
+      </>
+    );
+  if (v === 3)
+    // a plug and socket: the connector
+    return (
+      <>
+        <rect x="58" y="70" width="72" height="40" rx="12" fill={SUN} />
+        <rect x="130" y="78" width="22" height="8" rx="3" fill={SUN} />
+        <rect x="130" y="94" width="22" height="8" rx="3" fill={SUN} />
+        <path d="M58 90H30" stroke={SUN} strokeWidth="8" strokeLinecap="round" />
+        <rect x="176" y="58" width="86" height="64" rx="16" fill="#2E2C26" />
+        <rect x="190" y="78" width="10" height="8" rx="2" fill={INK} />
+        <rect x="190" y="94" width="10" height="8" rx="2" fill={INK} />
+        <path d="M262 90h28" stroke="#46433A" strokeWidth="8" strokeLinecap="round" />
+      </>
+    );
+  if (v === 4)
+    // searching across accounts
+    return (
+      <>
+        {[0, 1, 2].map((i) => (
+          <rect key={i} x={56 + i * 70} y="52" width="58" height="76" rx="12" fill="#2E2C26" />
+        ))}
+        <circle cx="188" cy="86" r="34" fill="none" stroke={SUN} strokeWidth="10" />
+        <path d="M212 112l26 26" stroke={SUN} strokeWidth="12" strokeLinecap="round" />
+      </>
+    );
+  if (v === 5)
+    // a list of things to ask
+    return (
+      <>
+        {[0, 1, 2].map((i) => (
+          <g key={i}>
+            <rect x={70 + (i % 2) * 24} y={36 + i * 40} width={[170, 150, 160][i]} height="30" rx="15" fill={i === 1 ? SUN : "#2E2C26"} />
+            <rect x={86 + (i % 2) * 24} y={47 + i * 40} width={[110, 96, 100][i]} height="8" rx="4" fill={i === 1 ? INK : "#736F5D"} opacity={i === 1 ? 0.55 : 1} />
+          </g>
+        ))}
+      </>
+    );
+  if (v === 6)
+    // a shield with a tick
+    return (
+      <>
+        <path d="M160 30l52 18v38c0 32-22 54-52 66-30-12-52-34-52-66V48Z" fill={SUN} />
+        <path d="M138 90l15 15 30-32" fill="none" stroke={INK} strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    );
+  if (v === 7)
+    // a spanner, for fixes
+    return (
+      <>
+        <rect x="56" y="98" width="140" height="48" rx="16" fill="#2E2C26" />
+        <rect x="74" y="116" width="80" height="9" rx="4.5" fill="#736F5D" />
+        <g transform="rotate(-45 210 80)">
+          <rect x="196" y="62" width="28" height="96" rx="14" fill={SUN} />
+          <circle cx="210" cy="54" r="30" fill={SUN} />
+          <rect x="200" y="20" width="20" height="34" rx="4" fill={INK} />
+        </g>
+      </>
+    );
   if (v === 1)
     // a reply that used one of Offload's tools
     return (
