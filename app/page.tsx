@@ -107,6 +107,11 @@ export default function Home() {
         <main>
           <section className="hero" aria-labelledby="hero-title">
             <div className="hero-copy">
+              <a className="news" href="#claude">
+                <span className="news-tag">New</span>
+                Move files by asking Claude
+                <span aria-hidden="true">&rarr;</span>
+              </a>
               <p className="kicker">Free Google Drive storage manager</p>
               <h1 id="hero-title">Move Google Drive files to your other account</h1>
               <p className="lede">

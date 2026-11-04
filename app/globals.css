@@ -41,6 +41,9 @@ a { color:var(--teal); }
 
 /* hero */
 .hero { display:grid; grid-template-columns:1fr 1.02fr; gap:56px; align-items:center; padding:36px 0 72px; }
+.news { display:inline-flex; align-items:center; gap:10px; margin:0 0 18px; padding:5px 14px 5px 5px; border-radius:999px; background:var(--surface); border:1px solid var(--hair); color:var(--ink-2); font-size:14px; font-weight:500; text-decoration:none; transition:border-color .12s, color .12s; }
+.news:hover { border-color:var(--teal); color:var(--ink); }
+.news-tag { background:var(--teal); color:#fff; font-size:12px; font-weight:700; border-radius:999px; padding:2px 9px; }
 .kicker { color:var(--teal-deep); font-weight:600; font-size:15px; margin:0 0 16px; }
 h1 { font-size:clamp(42px, 5.4vw, 64px); line-height:1.02; letter-spacing:-0.035em; margin:0 0 22px; font-weight:700; text-wrap:balance; }
 .lede { font-size:20px; color:var(--ink-2); margin:0 0 30px; max-width:33em; text-wrap:pretty; }
