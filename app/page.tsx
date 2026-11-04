@@ -1,6 +1,7 @@
 import { Header, Footer } from "@/components/Chrome";
 import { HeroDemo } from "@/components/HeroDemo";
 import { GmailDemo } from "@/components/GmailDemo";
+import { CopyUrl } from "@/components/CopyUrl";
 import { APP_URL, FAQS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const jsonLd = {
@@ -37,6 +38,7 @@ const jsonLd = {
         "Bulk delete Gmail emails by category, size, age, sender or subject",
         "Accept all incoming transfers at once",
         "See folder sizes and storage use",
+        "Move Drive files between your accounts by asking Claude",
       ],
     },
     {
@@ -187,11 +189,59 @@ export default function Home() {
             <GmailDemo />
           </section>
 
+          <section id="claude" className="block claude-block" aria-labelledby="claude-title">
+            <div>
+              <p className="kicker">New: Offload for Claude</p>
+              <h2 id="claude-title">Or just ask Claude</h2>
+              <p className="lede">
+                Add Offload to Claude and manage both accounts from the chat. Ask what&rsquo;s taking up space, where a file is,
+                or to move a folder across. Claude finds it, checks with you, and moves it. Nobody has to open the other account
+                to accept.
+              </p>
+              <ol className="csteps">
+                <li>
+                  In Claude, open <b>Settings &rarr; Connectors &rarr; Add custom connector</b> and paste this address:
+                  <CopyUrl url={`${SITE_URL}/mcp`} />
+                </li>
+                <li>
+                  Select <b>Connect</b> and sign in twice: first the account that&rsquo;s full, then the one that receives the
+                  files.
+                </li>
+                <li>Ask away. Claude shows you what it&rsquo;ll move and how much it frees before anything changes.</li>
+              </ol>
+            </div>
+            <div className="chat" aria-label="Example conversation with Claude">
+              <p className="msg you">What&rsquo;s eating my storage? I&rsquo;m out of space on my main account.</p>
+              <div className="msg claude">
+                <span className="tool">Offload &middot; find_files</span>
+                <p>
+                  <b>you@gmail.com</b> is at 14.6 of 15 GB. The biggest things are in <b>Videos/2023</b> (6.2 GB, 41 files) and
+                  three phone backups (2.8 GB). <b>you.archive@gmail.com</b> has 11 GB free. Want me to move Videos/2023 there?
+                </p>
+              </div>
+              <p className="msg you">Yes, move the folder.</p>
+              <div className="msg claude">
+                <span className="tool">Offload &middot; transfer_files</span>
+                <p>
+                  Done: 41 files moved, <b>6.2 GB freed</b>. They&rsquo;re in &ldquo;Transferred from you@gmail.com&rdquo; in
+                  your archive account, with the folder kept as it was.
+                </p>
+              </div>
+              <p className="msg you">Where&rsquo;s my wedding video now?</p>
+              <div className="msg claude">
+                <span className="tool">Offload &middot; find_files</span>
+                <p>
+                  In <b>you.archive@gmail.com</b>, inside Videos/2023. It moved there today from your main account.
+                </p>
+              </div>
+            </div>
+          </section>
+
           <section className="block privacy-block" aria-labelledby="privacy-title">
             <div>
               <h2 id="privacy-title">Your files never leave Google</h2>
               <p className="lede">
-                Offload has no server and stores none of your files. For Drive it asks Google to change who owns your files, the
+                Offload stores none of your files. For Drive it asks Google to change who owns your files, the
                 same thing you could do one file at a time in Drive&rsquo;s share settings, just thousands at once. Gmail cleanup
                 and Google Photos copies happen inside Google too.
               </p>
@@ -202,8 +252,8 @@ export default function Home() {
                 <p>Offload is a Google Apps Script app that runs under the Google account you sign in with.</p>
               </li>
               <li>
-                <h3>No server, no database</h3>
-                <p>There&rsquo;s nowhere for your files to go. The developer can&rsquo;t see your files or your account.</p>
+                <h3>No database</h3>
+                <p>Nothing about your files is kept anywhere. The developer can&rsquo;t see your files or your account.</p>
               </li>
               <li>
                 <h3>Revoke access any time</h3>

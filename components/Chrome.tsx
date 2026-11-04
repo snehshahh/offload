@@ -11,6 +11,7 @@ export function Header() {
       <nav className="top-nav" aria-label="Main">
         <a href="/#how">How it works</a>
         <a href="/#gmail">Gmail cleanup</a>
+        <a href="/#claude">Use with Claude</a>
         <a href="/#faq">Questions</a>
         <Link href="/blog">Blog</Link>
         <a className="btn btn-main" href={APP_URL}>
@@ -30,6 +31,7 @@ export function Footer() {
           <Link href="/">Home</Link>
           <a href="/#how">How it works</a>
           <a href="/#gmail">Gmail cleanup</a>
+          <a href="/#claude">Use with Claude</a>
           <a href="/#faq">Questions</a>
           <Link href="/blog">Blog</Link>
           <Link href="/privacy">Privacy</Link>
@@ -37,8 +39,8 @@ export function Footer() {
         </nav>
       </div>
       <p>
-        Offload is free and independent. It isn&rsquo;t affiliated with, endorsed by or sponsored by Google. Google Drive, Gmail
-        and Google Photos are trademarks of Google LLC.
+        Offload is free and independent. It isn&rsquo;t affiliated with, endorsed by or sponsored by Google or Anthropic. Google
+        Drive, Gmail and Google Photos are trademarks of Google LLC. Claude is a trademark of Anthropic.
       </p>
     </footer>
   );

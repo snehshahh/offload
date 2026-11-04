@@ -56,6 +56,10 @@ export const FAQS: { q: string; a: string }[] = [
     a: "Yes. The Gmail tab finds emails in bulk with quick filters like Promotions, bigger than 10 MB or older than a year, or by words, subject and sender. It shows how many match, then moves them to Trash once you confirm. Starred and important emails are left alone by default, and anything trashed can be restored for 30 days.",
   },
   {
+    q: "Can I use Offload from Claude?",
+    a: "Yes. Add Offload as a custom connector in Claude's settings and sign in with both of your Google accounts. Then ask Claude in plain words: what's using your storage, where a file is, or to move a folder to your other account. Claude checks with you before moving anything, and the other account accepts automatically, so there's nothing to do on that side.",
+  },
+  {
     q: "Does it work with work or school accounts?",
     a: "Usually not. Most organisations block ownership transfers outside their domain. Offload is made for personal Gmail accounts.",
   },
