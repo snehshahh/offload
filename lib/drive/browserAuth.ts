@@ -1,15 +1,17 @@
 /**
  * Google sign-in for the Offload web app, entirely in the browser (Google Identity Services token flow).
- * Access tokens stay in this tab: in memory, plus sessionStorage so a reload doesn't sign you out. They are never
- * sent anywhere except Google. They last about an hour; when one runs out mid-job, Drive calls for that account wait
- * until the person clicks Continue (Google's window may only open on a click), then carry on.
+ * Access tokens stay in this browser: in memory, plus localStorage, so reloads, new tabs and later visits keep the
+ * accounts signed in (tabs share fresh tokens with each other). They are never sent anywhere except Google. Each lasts
+ * about an hour; once one runs out, calls for that account wait until the person clicks Continue (Google's window may
+ * only open on a click), then carry on. Sign out removes an account from this browser.
  */
 import { DRIVE_SCOPE, GMAIL_SCOPE, LIBRARY_SCOPE, PICKER_SCOPE, ScopeNeededError, scopeName, setTokenSource, type Account } from "./api";
 
 const KNOWN_SCOPES = [DRIVE_SCOPE, GMAIL_SCOPE, PICKER_SCOPE, LIBRARY_SCOPE];
 
 const GIS_SRC = "https://accounts.google.com/gsi/client";
-const KEY = "offload.tokens.v1";
+const KEY = "offload.tokens.v2";
+const OLD_KEY = "offload.tokens.v1"; // per-tab sessionStorage, before sign-ins lasted across tabs
 
 /** s: the permissions (scopes) this token covers, space-separated. */
 type Tok = { e: string; token: string; until: number; s?: string };
@@ -29,22 +31,56 @@ let onWaiting: ((emails: string[]) => void) | null = null;
 
 function save() {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify([...tokens.values()]));
+    localStorage.setItem(KEY, JSON.stringify([...tokens.values()]));
   } catch {
-    /* private mode: tokens just won't survive a reload */
+    /* storage blocked: sign-ins just won't survive a reload */
   }
 }
 
-/** Sets up the client ID and makes Drive calls use this tab's tokens. Returns accounts signed in earlier in this tab. */
+function read(): Tok[] {
+  try {
+    let raw = localStorage.getItem(KEY);
+    if (!raw) {
+      raw = sessionStorage.getItem(OLD_KEY); // carry over sign-ins from before
+      if (raw) {
+        localStorage.setItem(KEY, raw);
+        sessionStorage.removeItem(OLD_KEY);
+      }
+    }
+    const list = JSON.parse(raw || "[]");
+    return Array.isArray(list) ? list.filter((t: Tok) => t && t.e && t.token) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Another tab signed in, refreshed access or signed out: use its fresher tokens here too. */
+function syncFromOtherTab() {
+  const saved = new Map(read().map((t) => [t.e, t]));
+  for (const [e, t] of saved) {
+    const mine = tokens.get(e);
+    if (!mine || t.until > mine.until) {
+      tokens.set(e, t);
+      if (t.until > Date.now()) {
+        const d = waiting.get(e);
+        waiting.delete(e);
+        d?.resolve(t.token);
+      }
+    }
+  }
+  for (const e of [...tokens.keys()]) if (!saved.has(e)) tokens.delete(e);
+  onWaiting?.([...waiting.keys()]);
+}
+
+/** Sets up the client ID and makes Google calls use this browser's tokens. Returns the accounts signed in earlier. */
 export function initBrowserAuth(id: string): Account[] {
   clientId = id;
   setTokenSource(source);
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(KEY) || "[]") as Tok[];
-    for (const t of saved) if (t && t.e && t.token) tokens.set(t.e, t);
-  } catch {
-    /* nothing saved */
-  }
+  tokens.clear();
+  for (const t of read()) tokens.set(t.e, t);
+  window.addEventListener("storage", (ev) => {
+    if (ev.key === KEY) syncFromOtherTab();
+  });
   return [...tokens.keys()].map((e) => ({ e, r: "" }));
 }
 
@@ -119,7 +155,7 @@ function scopesOf(e: string): string[] {
   return [DRIVE_SCOPE, ...KNOWN_SCOPES.filter((sc) => sc !== DRIVE_SCOPE && granted.includes(sc))];
 }
 
-/** Whether this account has given Offload this permission (in this tab). */
+/** Whether this account has given Offload this permission (in this browser). */
 export function hasScope(e: string, scope: string): boolean {
   return scopesOf(e).includes(scope);
 }
@@ -161,7 +197,7 @@ export async function reauth(e: string) {
   onWaiting?.([...waiting.keys()]);
 }
 
-/** Forgets an account in this tab and asks Google to drop its token. */
+/** Forgets an account in this browser and asks Google to drop its token. */
 export function signOut(e: string) {
   const t = tokens.get(e);
   tokens.delete(e);

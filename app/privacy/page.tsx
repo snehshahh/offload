@@ -49,10 +49,11 @@ export default function Privacy() {
             can&rsquo;t see your files, your photos, your mail or your accounts.
           </p>
           <p>
-            In your browser, the tab keeps its Google sign-ins in memory and in the tab&rsquo;s session storage, so a reload
-            doesn&rsquo;t sign you out; they&rsquo;re only ever sent to Google, and closing the tab, choosing Sign out, or waiting
-            about an hour ends them. It also remembers, in your browser, which Google Photos album it made for you, so later copies
-            go into the same one.
+            In your browser, Offload keeps its Google sign-ins in this browser&rsquo;s storage, so reloading, opening a new tab or
+            coming back later doesn&rsquo;t sign you out. They&rsquo;re only ever sent to Google. Each one lets Offload act for
+            about an hour; after that it asks you to click Continue, and Google renews it. Choosing Sign out removes an account
+            from this browser. It also remembers, in your browser, which Google Photos album it made for you, so later copies go
+            into the same one.
           </p>
           <p>
             On your files, it labels each item it moves with the account it came from and the date: a private note on the file that

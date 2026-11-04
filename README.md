@@ -32,7 +32,7 @@ Environment variables:
 
 ## The web app: `/app`
 
-It runs in the browser: Google Identity Services gives the tab a short-lived Drive token for each account you sign in with (up to 5), and the page talks to the Drive API directly. Tokens never reach this site's server. Because every account is signed in, a transfer is requested by the sender and accepted by the receiver in one step.
+It runs in the browser: Google Identity Services gives it a short-lived token for each account you sign in with (up to 5), and the page talks to Google's APIs directly. Tokens are kept in the browser's localStorage, so reloads, new tabs and later visits stay signed in (open tabs share fresh tokens); after about an hour each account needs one click on Continue, and Sign out removes it. Tokens never reach this site's server. Because every account is signed in, a transfer is requested by the sender and accepted by the receiver in one step.
 
 - **Tabs:** Folders (browse My Drive, sizes added up in the background), Large files, Photos & videos (thumbnails), and Waiting to accept (transfers started from Drive itself, accepted in one click).
 - **Shared engine:** `lib/drive/engine.ts` is the same code the Claude connector uses. `lib/drive/api.ts` is the Drive caller; the browser plugs in its tokens via `lib/drive/browserAuth.ts`, the server via `lib/mcp/google.ts`.
