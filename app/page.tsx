@@ -2,6 +2,7 @@ import { Header, Footer } from "@/components/Chrome";
 import { HeroDemo } from "@/components/HeroDemo";
 import { GmailDemo } from "@/components/GmailDemo";
 import { CopyUrl } from "@/components/CopyUrl";
+import { ClaudeMark, WorksWith } from "@/components/BrandMarks";
 import { APP_URL, FAQS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const jsonLd = {
@@ -203,6 +204,7 @@ export default function Home() {
                 the chat, up to five. Ask how much space each one has, where a file is, or to move a folder across. It finds it,
                 checks with you, and moves it. Nobody has to open the other account to accept.
               </p>
+              <WorksWith />
               <ol className="csteps">
                 <li>
                   Copy Offload&rsquo;s connector address:
@@ -212,7 +214,7 @@ export default function Home() {
                   Add it as a custom connector:
                   <ul className="capps">
                     <li>
-                      <b>Claude:</b> Settings &rarr; Connectors &rarr; Add custom connector
+                      <ClaudeMark size={15} /> <b>Claude:</b> Settings &rarr; Connectors &rarr; Add custom connector
                     </li>
                     <li>
                       <b>ChatGPT:</b> turn on Developer mode in Settings, then add a new connector (on plans with custom connectors)

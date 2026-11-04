@@ -245,3 +245,10 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
 .capps li { counter-increment:none; }
 .csteps li { min-width:0; }
 .copyurl { max-width:min(460px, 100%); box-sizing:border-box; }
+/* "Works with" row in the AI section */
+.works { display:flex; align-items:center; gap:8px 10px; flex-wrap:wrap; margin:-6px 0 26px; }
+.works-label { font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.works-chip { display:inline-flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--hair); border-radius:999px; padding:7px 14px 7px 10px; font-weight:600; font-size:15px; color:var(--ink); }
+.works-chip-name { padding-left:14px; }
+.works-more { font-size:14px; color:var(--muted); }
+.capps .bm-claude { vertical-align:-2px; }
