@@ -43,6 +43,19 @@ export function PostBody({ blocks }: { blocks: Block[] }) {
         if ("h2" in b) return <h2 key={i}>{b.h2}</h2>;
         if ("p" in b) return <p key={i}><Inline text={b.p} /></p>;
         if ("note" in b) return <p key={i} className="note"><Inline text={b.note} /></p>;
+        if ("chat" in b)
+          return (
+            <div key={i} className="chat post-chat" role="group" aria-label="Example conversation">
+              {b.chat.map((m, j) => (
+                <div key={j} className={`msg ${m.who === "you" ? "you" : "claude"}`}>
+                  {m.tool && <span className="tool">Offload · {m.tool}</span>}
+                  <span className="msg-text">
+                    <Inline text={m.text} />
+                  </span>
+                </div>
+              ))}
+            </div>
+          );
         const items = "ul" in b ? b.ul : b.ol;
         const List = "ul" in b ? "ul" : "ol";
         return (

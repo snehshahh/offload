@@ -199,13 +199,13 @@ export default function Home() {
             <div>
               <p className="kicker">New: Offload in your AI chat</p>
               <div className="ai-head">
-                <h2 id="claude-title">
-                  Or just <mark>ask your AI</mark>
-                </h2>
                 <span className="ai-logos" aria-hidden="true">
                   <OpenAIMark size={38} />
                   <ClaudeMark size={38} />
                 </span>
+                <h2 id="claude-title">
+                  Just <mark>ask your AI</mark>
+                </h2>
               </div>
               <p className="lede">
                 Add Offload to Claude, ChatGPT or any AI app that supports MCP connectors, and manage all your Google accounts from

@@ -257,3 +257,8 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
 .ai-logos { display:inline-flex; align-items:center; gap:10px; }
 .ai-logos svg, .ai-logos img { display:block; }
 .capps .bm-openai { vertical-align:-2px; display:inline-block; }
+/* conversations inside blog posts */
+.post-chat { margin:26px 0 30px; }
+.post-chat .msg-text { display:block; }
+.post-chat .msg.you b, .post-chat .msg.you code { color:#fff; }
+.post-chat .tool { display:block; width:max-content; }

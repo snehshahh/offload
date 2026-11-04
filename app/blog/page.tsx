@@ -45,7 +45,7 @@ export default function Blog() {
             if (!posts.length) return null;
             return (
               <section key={topic} className="block" aria-labelledby={`topic-${topic}`}>
-                <h2 id={`topic-${topic}`}>{topic === "Storage" ? "Google storage" : topic === "Photos" ? "Google Photos" : topic}</h2>
+                <h2 id={`topic-${topic}`}>{topic === "Storage" ? "Google storage" : topic === "Photos" ? "Google Photos" : topic === "AI" ? "Offload in AI chat" : topic}</h2>
                 <div className="post-grid">
                   {posts.map((p) => (
                     <Link key={p.slug} href={`/blog/${p.slug}`} className="post-card">

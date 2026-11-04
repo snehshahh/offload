@@ -8,9 +8,11 @@ export type Block =
   | { p: string }
   | { ul: string[] }
   | { ol: string[] }
-  | { note: string };
+  | { note: string }
+  /** A conversation, shown as chat bubbles. who: "you" or "ai"; tool: the Offload tool the AI used, if any. */
+  | { chat: { who: "you" | "ai"; text: string; tool?: string }[] };
 
-export type Topic = "Storage" | "Drive" | "Gmail" | "Photos";
+export type Topic = "Storage" | "Drive" | "AI" | "Gmail" | "Photos";
 
 export type Post = {
   slug: string;
@@ -53,11 +55,78 @@ export const POSTS: Post[] = [
     ],
   },
   {
+    slug: "free-up-google-storage-by-asking-chatgpt-or-claude",
+    title: "Storage full? Just ask ChatGPT or Claude to sort it out",
+    description:
+      "No folders to dig through, no ownership requests to accept. With Offload connected, you free up Google storage the way you’d ask a friend for help: in a few sentences.",
+    topic: "AI",
+    date: "2026-11-04",
+    keywords: ["free up Google storage with ChatGPT", "ChatGPT Google Drive", "Claude Google Drive", "AI Google storage cleanup", "move Google Drive files with AI", "Google storage full fix"],
+    body: [
+      { p: "The email always arrives at a bad moment: **your Google storage is almost full**. Photos stop backing up, Drive refuses uploads, and the usual fix is an evening of sorting files by size, opening share settings one file at a time, then signing in to your other account to accept every single transfer." },
+      { p: "There’s a calmer way now. Connect [Offload](/blog/move-google-drive-files-with-claude) to ChatGPT or Claude, link your Google accounts once, and the whole job becomes a short conversation. You say what you want; the assistant looks, checks with you, and moves things. Your other account accepts on its own." },
+      { h2: "What it sounds like" },
+      { p: "Here’s an example of a full cleanup, start to finish. The numbers are made up, but the shape of it is exactly how it goes." },
+      { chat: [
+        { who: "you", text: "My Google storage is full again. How bad is it?" },
+        { who: "ai", tool: "get_accounts", text: "**you@gmail.com** is almost full: 14.6 GB of 15 GB used, with 410 MB left. Your other account, **you.archive@gmail.com**, has plenty of room: 11 GB free. Most of the space in your main account is in Drive (11.7 GB)." },
+        { who: "you", text: "What’s taking up all that space?" },
+        { who: "ai", tool: "find_files", text: "The biggest things are videos. **Videos/2023** holds 41 files and 6.2 GB on its own, and three old phone backups add another 2.8 GB. Want me to move Videos/2023 to you.archive@gmail.com? It would free about 6.2 GB." },
+        { who: "you", text: "Yes, move the whole folder." },
+        { who: "ai", tool: "transfer_files", text: "Done. Moved 41 files and 1 folder (6.2 GB) from you@gmail.com to you.archive@gmail.com, with the folder kept exactly as it was. you@gmail.com was at 14.6 GB; it should drop to about 8.4 GB once Google updates its numbers, usually within a few hours." },
+        { who: "you", text: "Wait, where did my wedding video end up?" },
+        { who: "ai", tool: "find_files", text: "It’s in **you.archive@gmail.com**, inside Videos/2023. It moved there today from your main account." },
+      ] },
+      { p: "Three questions and one yes. No checkboxes, no second account to open, and at every step you know exactly what changed." },
+      { h2: "Why a conversation suits this job" },
+      { ul: [
+        "**You describe, it finds.** “Old videos”, “anything over a gigabyte”, “the trip photos from Goa”: you don’t need to know where things are, only what they are.",
+        "**It sees every account at once.** Link up to five Google accounts, and it can tell you which one is full, which has room, and where any file lives.",
+        "**It asks before it acts.** Nothing moves until you say so, and you’re told what will move, how much space it frees and where it’s going.",
+        "**Answers come in plain sentences.** Every reply starts with a short summary in words, not a wall of numbers, so it’s easy to follow along.",
+        "**Big jobs keep going.** Thousands of files move in steps, and the assistant carries on by itself, telling you how far it’s got.",
+      ] },
+      { h2: "What happens behind the scenes" },
+      { p: "Offload uses Google Drive’s own **ownership transfer**, the same thing as Share → Transfer ownership in Drive, just for many files at once. Because both of your accounts are signed in, the full account hands each file over and your other account accepts it in the same moment." },
+      { ul: [
+        "Nothing is copied, so nothing is duplicated, and nothing is deleted.",
+        "Folders keep their structure. Files that arrive without their folder are gathered into “Transferred from” plus the sender’s address.",
+        "Shared links and edit history keep working: they’re still the same files.",
+        "Each folder or file you move is quietly labelled with where it came from and when, so you can always ask later.",
+        "Changed your mind? Ask for it to be moved back.",
+      ] },
+      { h2: "Good things to ask" },
+      { ul: [
+        "“Which of my accounts has the most free space?”",
+        "“List everything over 500 MB in my main account.”",
+        "“How much would I free by moving my Camera folder?”",
+        "“Move all my screen recordings to my other account.”",
+        "“What did I move to my archive account this month?”",
+        "“Move the Projects folder back to my main account.”",
+      ] },
+      { h2: "Set it up in two minutes" },
+      { ol: [
+        "Copy Offload’s connector address from the [home page](/#claude).",
+        "Add it as a custom connector. In **Claude**: Settings → Connectors → Add custom connector. In **ChatGPT**: turn on Developer mode in Settings, then add a new connector.",
+        "Select **Connect** and sign in with the account that’s full, then your other one. Add up to five if you have them.",
+        "Start a new chat and ask your first question.",
+      ] },
+      { p: "The [step-by-step guide](/blog/move-google-drive-files-with-claude) has every detail, including what to do if Google says the app isn’t verified." },
+      { h2: "What it won’t do" },
+      { ul: [
+        "It only moves files your account owns. Files other people shared with you don’t use your storage anyway.",
+        "It’s made for personal Google accounts. Work and school accounts usually block transfers outside the organisation.",
+        "In chat it handles Google Drive. For [Gmail cleanup](/blog/gmail-storage-full) and [copying Google Photos](/blog/move-google-photos-to-another-account), open the [Offload app](app).",
+      ] },
+      { note: "Start small: ask it to move one folder, open your other account to see it arrived, then go for the big ones. Google can take a few hours to update the storage figures, so [don’t worry if the number lags](/blog/google-storage-still-full-after-deleting)." },
+    ],
+  },
+  {
     slug: "move-google-drive-files-with-claude",
     title: "Move Google Drive files to your other account by asking Claude or ChatGPT",
     description:
       "Add Offload to Claude, ChatGPT or another AI app, link your Google accounts (up to five), and free up storage from the chat: ask how much space each has, where a file is, or to move a folder across.",
-    topic: "Drive",
+    topic: "AI",
     date: "2026-11-04",
     keywords: ["move Google Drive files with Claude", "Claude Google Drive connector", "ChatGPT Google Drive connector", "Google Drive MCP connector", "Offload for Claude", "transfer Google Drive ownership with AI", "Claude MCP Google Drive"],
     body: [
@@ -551,7 +620,7 @@ export const POSTS: Post[] = [
   },
 ];
 
-export const TOPICS: Topic[] = ["Storage", "Drive", "Gmail", "Photos"];
+export const TOPICS: Topic[] = ["Storage", "Drive", "AI", "Gmail", "Photos"];
 
 export function getPost(slug: string) {
   return POSTS.find((p) => p.slug === slug);
@@ -559,7 +628,9 @@ export function getPost(slug: string) {
 
 export function readingMinutes(post: Post) {
   const text = post.body
-    .map((b) => ("h2" in b ? b.h2 : "p" in b ? b.p : "note" in b ? b.note : ("ul" in b ? b.ul : b.ol).join(" ")))
+    .map((b) =>
+      "h2" in b ? b.h2 : "p" in b ? b.p : "note" in b ? b.note : "chat" in b ? b.chat.map((m) => m.text).join(" ") : ("ul" in b ? b.ul : b.ol).join(" ")
+    )
     .join(" ");
   return Math.max(2, Math.round(text.split(/\s+/).length / 220));
 }
