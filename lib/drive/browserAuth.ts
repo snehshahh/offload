@@ -4,7 +4,9 @@
  * sent anywhere except Google. They last about an hour; when one runs out mid-job, Drive calls for that account wait
  * until the person clicks Continue (Google's window may only open on a click), then carry on.
  */
-import { DRIVE_SCOPE, GMAIL_SCOPE, ScopeNeededError, setTokenSource, type Account } from "./api";
+import { DRIVE_SCOPE, GMAIL_SCOPE, LIBRARY_SCOPE, PICKER_SCOPE, ScopeNeededError, scopeName, setTokenSource, type Account } from "./api";
+
+const KNOWN_SCOPES = [DRIVE_SCOPE, GMAIL_SCOPE, PICKER_SCOPE, LIBRARY_SCOPE];
 
 const GIS_SRC = "https://accounts.google.com/gsi/client";
 const KEY = "offload.tokens.v1";
@@ -85,7 +87,7 @@ async function ask(hint: string | undefined, prompt: "" | "select_account" | "co
         if (resp.error) return reject(new Error(resp.error_description || resp.error));
         const missing = scopes.filter((sc) => !oauth2.hasGrantedAllScopes(resp, sc));
         if (missing.length) {
-          const what = missing.includes(GMAIL_SCOPE) && !missing.includes(DRIVE_SCOPE) ? "Gmail" : "Google Drive";
+          const what = scopeName(missing.includes(DRIVE_SCOPE) ? DRIVE_SCOPE : missing[0]);
           return reject(new Error(`Offload needs access to ${what}. Try again and tick the ${what} box on Google's screen.`));
         }
         resolve({ token: resp.access_token, expiresIn: Number(resp.expires_in) || 3600, scope: String(resp.scope || scopes.join(" ")) });
@@ -114,18 +116,26 @@ function keep(e: string, token: string, expiresIn: number, scope: string) {
 
 function scopesOf(e: string): string[] {
   const granted = (tokens.get(e)?.s || DRIVE_SCOPE).split(" ");
-  return [DRIVE_SCOPE, ...(granted.includes(GMAIL_SCOPE) ? [GMAIL_SCOPE] : [])];
+  return [DRIVE_SCOPE, ...KNOWN_SCOPES.filter((sc) => sc !== DRIVE_SCOPE && granted.includes(sc))];
 }
 
-/** Whether this account has let Offload use Gmail (in this tab). */
-export function hasGmail(e: string): boolean {
-  return scopesOf(e).includes(GMAIL_SCOPE);
+/** Whether this account has given Offload this permission (in this tab). */
+export function hasScope(e: string, scope: string): boolean {
+  return scopesOf(e).includes(scope);
 }
 
-/** Asks Google to let Offload use Gmail for this account too (keeps Drive). Call from a click. */
-export async function allowGmail(e: string) {
-  const { token, expiresIn, scope } = await ask(e, "", [DRIVE_SCOPE, GMAIL_SCOPE]);
-  keep(e, token, expiresIn, scope);
+/** Asks Google for one more permission for this account, keeping the ones it has. Call from a click. */
+export async function allowScope(e: string, scope: string) {
+  const { token, expiresIn, scope: got } = await ask(e, "", [...new Set([...scopesOf(e), scope])]);
+  keep(e, token, expiresIn, got);
+}
+
+export const hasGmail = (e: string) => hasScope(e, GMAIL_SCOPE);
+export const allowGmail = (e: string) => allowScope(e, GMAIL_SCOPE);
+
+/** An access token for `acct` covering `scope` (waits for Continue if it has run out). `force` = the last one was rejected. */
+export function tokenFor(acct: Account, scope: string, force = false): Promise<string> {
+  return source(acct, force, scope);
 }
 
 /** Signs in one more Google account (Google shows its account chooser). Call from a click. */

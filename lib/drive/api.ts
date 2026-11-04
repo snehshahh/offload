@@ -9,6 +9,18 @@ const DRIVE = "https://www.googleapis.com/drive/v3";
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
+/** See only the photos the person picks in Google's picker (source account). */
+export const PICKER_SCOPE = "https://www.googleapis.com/auth/photospicker.mediaitems.readonly";
+/** Add photos to Google Photos, and nothing else (receiving account). */
+export const LIBRARY_SCOPE = "https://www.googleapis.com/auth/photoslibrary.appendonly";
+
+const SCOPE_NAMES: Record<string, string> = {
+  [DRIVE_SCOPE]: "Google Drive",
+  [GMAIL_SCOPE]: "Gmail",
+  [PICKER_SCOPE]: "the Google Photos picker",
+  [LIBRARY_SCOPE]: "Google Photos",
+};
+export const scopeName = (s: string) => SCOPE_NAMES[s] || s;
 
 /** A linked Google account: its email, plus a server-side refresh token (empty in the browser). */
 export type Account = { e: string; r: string };
@@ -22,7 +34,7 @@ export type TokenSource = (acct: Account, force: boolean, scope: string) => Prom
 /** The account hasn't given Offload this permission yet; the person has to allow it (from a click). */
 export class ScopeNeededError extends Error {
   constructor(readonly email: string, readonly scope: string) {
-    super(`${email} hasn't allowed Offload to use ${scope === GMAIL_SCOPE ? "Gmail" : "Google Drive"} yet.`);
+    super(`${email} hasn't allowed Offload to use ${scopeName(scope)} yet.`);
   }
 }
 
@@ -54,6 +66,11 @@ export function drive<T = any>(acct: Account, method: Method, path: string, quer
 /** Calls the Gmail API as `acct`; `path` is relative to gmail/v1/users/me, e.g. "threads". */
 export function gmail<T = any>(acct: Account, method: Method, path: string, query?: Query, body?: object): Promise<T> {
   return call<T>(GMAIL, GMAIL_SCOPE, acct, method, path, query, body);
+}
+
+/** Calls any Google JSON API at `base` (e.g. the Photos Picker) as `acct`, with a token that covers `scope`. */
+export function callGoogle<T = any>(base: string, scope: string, acct: Account, method: Method, path: string, query?: Query, body?: object): Promise<T> {
+  return call<T>(base, scope, acct, method, path, query, body);
 }
 
 async function call<T>(base: string, scope: string, acct: Account, method: Method, path: string, query?: Query, body?: object): Promise<T> {

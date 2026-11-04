@@ -92,6 +92,15 @@ export default function Privacy() {
             and important ones alone unless you say otherwise. As with Drive, all of this happens between your browser and
             Google.
           </p>
+          <p>
+            Its Google Photos copy asks for two more permissions, only when you use it: in the account you copy from, to see the
+            photos and videos you pick in Google&rsquo;s own picker (nothing else); and in the account you copy to, to add photos
+            (it can&rsquo;t see or change anything already there). Picking, the album and adding the copies happen between your
+            browser and Google. The photos themselves are the one exception: browsers can&rsquo;t download them from Google Photos
+            piece by piece, so each piece passes through this website&rsquo;s server on its way from one of your accounts to the
+            other, together with the two short-lived access tokens needed for that piece. Nothing is stored, logged or looked at,
+            and the server only ever talks to Google Photos&rsquo; own addresses. Your originals are never changed or deleted.
+          </p>
 
           <h2>Offload for Claude</h2>
           <p>
