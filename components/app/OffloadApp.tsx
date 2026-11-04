@@ -1,0 +1,782 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Account } from "@/lib/drive/api";
+import {
+  acceptPending,
+  count,
+  findFiles,
+  folderSize,
+  human,
+  listFolders,
+  listing,
+  listPending,
+  storage,
+  transfer,
+  type AcceptResult,
+  type FolderEntry,
+  type Item,
+  type PendingItem,
+  type SizeState,
+  type TransferResult,
+} from "@/lib/drive/engine";
+import { initBrowserAuth, onReauthNeeded, reauth, signIn, signOut } from "@/lib/drive/browserAuth";
+import { Mark } from "@/components/Logo";
+
+const MAX_ACCOUNTS = 5;
+type Store = Awaited<ReturnType<typeof storage>>;
+type Tab = "folders" | "large" | "media" | "waiting";
+type Sel = { id: string; name: string; folder: boolean; bytes: number | null };
+type Job =
+  | { kind: "transfer"; from: string; to: string; result: TransferResult | null; running: boolean; error: string }
+  | { kind: "accept"; to: string; result: AcceptResult | null; running: boolean; error: string };
+
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const date = (iso: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+
+export default function OffloadApp({ clientId, classicUrl }: { clientId: string; classicUrl: string }) {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [ready, setReady] = useState(false);
+  const [stor, setStor] = useState<Record<string, Store | { error: string } | "loading">>({});
+  const [fromE, setFromE] = useState("");
+  const [toE, setToE] = useState("");
+  const pickedByHand = useRef(false);
+  const [tab, setTab] = useState<Tab>("folders");
+  const [sel, setSel] = useState<Map<string, Sel>>(new Map());
+  const [job, setJob] = useState<Job | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [waitingFor, setWaitingFor] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [reload, setReload] = useState(0);
+
+  const byEmail = useCallback((e: string) => accounts.find((a) => a.e === e), [accounts]);
+  const from = byEmail(fromE);
+  const to = byEmail(toE);
+
+  const loadStorage = useCallback((list: Account[]) => {
+    for (const a of list) {
+      setStor((s) => ({ ...s, [a.e]: "loading" }));
+      storage(a)
+        .then((st) => setStor((s) => ({ ...s, [a.e]: st })))
+        .catch((e) => setStor((s) => ({ ...s, [a.e]: { error: errText(e) } })));
+    }
+  }, []);
+
+  useEffect(() => {
+    const restored = initBrowserAuth(clientId);
+    onReauthNeeded(setWaitingFor);
+    setAccounts(restored);
+    setReady(true);
+    if (restored.length) loadStorage(restored);
+  }, [clientId, loadStorage]);
+
+  // Keep From/To valid; until the person picks, send from the fullest account to the one with the most room.
+  useEffect(() => {
+    const emails = accounts.map((a) => a.e);
+    const loaded = accounts.map((a) => stor[a.e]).filter((s): s is Store => !!s && s !== "loading" && !("error" in s));
+    let f = emails.includes(fromE) ? fromE : emails[0] || "";
+    if (!pickedByHand.current && loaded.length === accounts.length && loaded.length > 1) {
+      f = [...loaded].sort((x, y) => (y.percent_used ?? -1) - (x.percent_used ?? -1))[0].email;
+    }
+    let t = emails.includes(toE) && toE !== f ? toE : "";
+    if (!t || !pickedByHand.current) {
+      const others = loaded.filter((s) => s.email !== f).sort((x, y) => (y.bytes.free ?? Infinity) - (x.bytes.free ?? Infinity));
+      t = others[0]?.email || emails.find((e) => e !== f) || "";
+    }
+    if (f !== fromE) setFromE(f);
+    if (t !== toE) setToE(t);
+  }, [accounts, stor, fromE, toE]);
+
+  useEffect(() => setSel(new Map()), [fromE]);
+
+  const addAccount = async () => {
+    setNotice("");
+    setBusy(true);
+    try {
+      const a = await signIn();
+      if (accounts.some((x) => x.e === a.e)) {
+        setNotice(`${a.e} is already signed in. To add another account, choose a different one in Google's window.`);
+      } else {
+        setAccounts((list) => [...list, a]);
+        loadStorage([a]);
+      }
+    } catch (e) {
+      setNotice(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeAccount = (e: string) => {
+    signOut(e);
+    setAccounts((list) => list.filter((a) => a.e !== e));
+  };
+
+  const toggle = useCallback((s: Sel) => {
+    setSel((m) => {
+      const n = new Map(m);
+      if (n.has(s.id)) n.delete(s.id);
+      else n.set(s.id, s);
+      return n;
+    });
+  }, []);
+  const setSize = useCallback((id: string, bytes: number) => {
+    setSel((m) => {
+      const s = m.get(id);
+      if (!s || s.bytes === bytes) return m;
+      const n = new Map(m);
+      n.set(id, { ...s, bytes });
+      return n;
+    });
+  }, []);
+
+  const picked = [...sel.values()];
+  const pickedBytes = picked.reduce((n, s) => n + (s.bytes || 0), 0);
+  const unknownSizes = picked.some((s) => s.bytes === null);
+  const pickedWhat = listing([
+    ...(picked.some((s) => s.folder) ? [count(picked.filter((s) => s.folder).length, "folder")] : []),
+    ...(picked.some((s) => !s.folder) ? [count(picked.filter((s) => !s.folder).length, "file")] : []),
+  ]);
+
+  const runTransfer = async () => {
+    if (!from || !to) return;
+    setConfirming(false);
+    const base = { kind: "transfer" as const, from: from.e, to: to.e };
+    setJob({ ...base, result: null, running: true, error: "" });
+    try {
+      let res = await transfer(accounts, { ids: picked.map((s) => s.id), from, to, budgetMs: 4000 });
+      setJob({ ...base, result: res, running: !res.done, error: "" });
+      while (!res.done) {
+        res = await transfer(accounts, { state: res.state, budgetMs: 4000 });
+        setJob({ ...base, result: res, running: !res.done, error: "" });
+      }
+      setSel(new Map());
+      loadStorage([from, to]);
+      setReload((n) => n + 1);
+    } catch (e) {
+      setJob((j) => (j ? { ...j, running: false, error: errText(e) } : j));
+    }
+  };
+
+  const runAccept = async (receiver: Account, ids: string[]) => {
+    const base = { kind: "accept" as const, to: receiver.e };
+    setJob({ ...base, result: null, running: true, error: "" });
+    try {
+      let res = await acceptPending(receiver, ids, 4000);
+      setJob({ ...base, result: res, running: !res.done, error: "" });
+      while (!res.done) {
+        res = await acceptPending(receiver, ids, 4000, res);
+        setJob({ ...base, result: res, running: !res.done, error: "" });
+      }
+      loadStorage(accounts);
+      setReload((n) => n + 1);
+    } catch (e) {
+      setJob((j) => (j ? { ...j, running: false, error: errText(e) } : j));
+    }
+  };
+
+  if (!ready) return <div className="oa" />;
+
+  return (
+    <div className="oa">
+      <header className="oa-top">
+        <a href="/" className="oa-brand" aria-label="Offload home">
+          <Mark size={30} />
+          <span>Offload</span>
+          <span className="oa-beta">Beta</span>
+        </a>
+        <a className="oa-classic" href={classicUrl}>
+          Gmail &amp; Google Photos: classic app <span aria-hidden="true">&rarr;</span>
+        </a>
+      </header>
+
+      {waitingFor.length > 0 && (
+        <div className="oa-reauth" role="alert">
+          <p>
+            Google needs you to confirm access for <b>{waitingFor[0]}</b> to carry on. Nothing is lost; the job is paused.
+          </p>
+          <button className="btn btn-main" onClick={() => reauth(waitingFor[0]).catch((e) => setNotice(errText(e)))}>
+            Continue
+          </button>
+        </div>
+      )}
+
+      {!clientId && <p className="oa-note bad">Offload isn&rsquo;t set up yet: the GOOGLE_CLIENT_ID environment variable is missing.</p>}
+      {notice && (
+        <p className="oa-note" role="status">
+          {notice}{" "}
+          <button className="oa-link" onClick={() => setNotice("")}>
+            Dismiss
+          </button>
+        </p>
+      )}
+
+      {accounts.length === 0 ? (
+        <section className="oa-hello">
+          <p className="kicker">Step 1 of 2</p>
+          <h1>
+            Sign in with the account that&rsquo;s <mark>running out of space</mark>
+          </h1>
+          <p className="oa-lede">
+            Then add your other Google account, and move folders, big files and photos between them in one go. The other
+            account accepts automatically, right here.
+          </p>
+          <button className="btn btn-main btn-lg" onClick={addAccount} disabled={busy || !clientId}>
+            {busy ? "Waiting for Google…" : "Sign in with Google"}
+          </button>
+          <ul className="oa-assure">
+            <li>Runs in your browser: files go straight from one Google account to the other</li>
+            <li>Nothing is deleted, and you can move things back</li>
+            <li>Sign in with up to {MAX_ACCOUNTS} accounts</li>
+          </ul>
+        </section>
+      ) : (
+        <>
+          <section className="oa-accounts" aria-label="Your accounts">
+            {accounts.map((a, i) => (
+              <AccountCard
+                key={a.e}
+                email={a.e}
+                main={i === 0}
+                st={stor[a.e]}
+                role={a.e === fromE ? "from" : a.e === toE ? "to" : ""}
+                onRemove={() => removeAccount(a.e)}
+              />
+            ))}
+            {accounts.length < MAX_ACCOUNTS && (
+              <button className={`oa-add${accounts.length === 1 ? " is-cta" : ""}`} onClick={addAccount} disabled={busy}>
+                <span className="oa-plus" aria-hidden="true">+</span>
+                <b>{accounts.length === 1 ? "Add the account that receives files" : "Add another account"}</b>
+                <span>{busy ? "Waiting for Google…" : `Up to ${MAX_ACCOUNTS} in all`}</span>
+              </button>
+            )}
+          </section>
+
+          {accounts.length > 1 && (
+            <section className="oa-route" aria-label="Where files go">
+              <label>
+                <span>Move from</span>
+                <select
+                  value={fromE}
+                  onChange={(e) => {
+                    pickedByHand.current = true;
+                    setFromE(e.target.value);
+                    if (e.target.value === toE) setToE(fromE);
+                  }}
+                >
+                  {accounts.map((a) => (
+                    <option key={a.e}>{a.e}</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="oa-swap"
+                aria-label="Swap the two accounts"
+                onClick={() => {
+                  pickedByHand.current = true;
+                  setFromE(toE);
+                  setToE(fromE);
+                }}
+              >
+                ⇄
+              </button>
+              <label>
+                <span>to</span>
+                <select
+                  value={toE}
+                  onChange={(e) => {
+                    pickedByHand.current = true;
+                    setToE(e.target.value);
+                  }}
+                >
+                  {accounts
+                    .filter((a) => a.e !== fromE)
+                    .map((a) => (
+                      <option key={a.e}>{a.e}</option>
+                    ))}
+                </select>
+              </label>
+            </section>
+          )}
+
+          <nav className="oa-tabs" role="tablist" aria-label="What to move">
+            {(
+              [
+                ["folders", "Folders"],
+                ["large", "Large files"],
+                ["media", "Photos & videos"],
+                ["waiting", "Waiting to accept"],
+              ] as [Tab, string][]
+            ).map(([k, label]) => (
+              <button key={k} role="tab" aria-selected={tab === k} className="oa-tab" onClick={() => setTab(k)}>
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          <section className="oa-panel">
+            {from && tab === "folders" && <FoldersTab key={from.e + reload} acct={from} sel={sel} toggle={toggle} setSize={setSize} />}
+            {from && tab === "large" && <FilesTab key={from.e + reload} acct={from} sel={sel} toggle={toggle} mode="large" />}
+            {from && tab === "media" && <FilesTab key={from.e + reload} acct={from} sel={sel} toggle={toggle} mode="media" />}
+            {tab === "waiting" && <WaitingTab key={reload} accounts={accounts} onAccept={runAccept} />}
+          </section>
+
+          {picked.length > 0 && tab !== "waiting" && (
+            <div className="oa-bar" role="region" aria-label="Selection">
+              <p>
+                <b>{pickedWhat}</b> selected
+                {pickedBytes > 0 && (
+                  <>
+                    , {unknownSizes ? "at least " : ""}
+                    {human(pickedBytes)}
+                  </>
+                )}
+                <button className="oa-link" onClick={() => setSel(new Map())}>
+                  Clear
+                </button>
+              </p>
+              {to ? (
+                <button className="btn btn-main" onClick={() => setConfirming(true)}>
+                  Move to {to.e}
+                </button>
+              ) : (
+                <button className="btn btn-main" onClick={addAccount}>
+                  Add an account to move to
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {confirming && from && to && (
+        <Modal title="Move these to your other account?" onClose={() => setConfirming(false)}>
+          <p>
+            <b>{pickedWhat}</b>
+            {pickedBytes > 0 && (
+              <>
+                {" "}
+                ({unknownSizes ? "at least " : "about "}
+                {human(pickedBytes)})
+              </>
+            )}{" "}
+            will move from <b>{from.e}</b> to <b>{to.e}</b>, with everything inside the folders. {to.e} accepts automatically.
+          </p>
+          <p className="oa-fine">
+            Nothing is copied or deleted, so nothing is lost: ownership changes hands, and {from.e} keeps edit access. You can
+            move things back any time.
+          </p>
+          <div className="oa-actions">
+            <button className="btn btn-main" onClick={runTransfer}>
+              Move now
+            </button>
+            <button className="btn btn-quiet" onClick={() => setConfirming(false)}>
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {job && (
+        <Modal
+          title={job.running ? (job.kind === "transfer" ? "Moving…" : "Accepting…") : job.error ? "Something went wrong" : "Done"}
+          onClose={job.running ? undefined : () => setJob(null)}
+        >
+          {job.running && <div className="oa-strip" aria-hidden="true" />}
+          <p className="oa-msg" aria-live="polite">
+            {job.result?.message || (job.running ? "Getting started…" : "")}
+          </p>
+          {job.error && <p className="oa-note bad">{job.error}</p>}
+          {job.kind === "transfer" && job.result && job.result.moved_this_step.length > 0 && job.running && (
+            <p className="oa-fine">Just moved: {job.result.moved_this_step.slice(0, 5).join(", ")}</p>
+          )}
+          {job.result && job.result.errors.length > 0 && (
+            <details className="oa-errors">
+              <summary>{count(job.result.errors.length, "problem")}</summary>
+              <ul>
+                {job.result.errors.map((e) => (
+                  <li key={e.id + e.detail}>
+                    <b>{e.name}</b>: {e.detail}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+          {job.running ? (
+            <p className="oa-fine">Keep this tab open until it finishes.</p>
+          ) : (
+            <div className="oa-actions">
+              <button className="btn btn-main" onClick={() => setJob(null)}>
+                Close
+              </button>
+            </div>
+          )}
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------------- */
+
+function AccountCard({ email, main, st, role, onRemove }: { email: string; main: boolean; st: Store | { error: string } | "loading" | undefined; role: "from" | "to" | ""; onRemove: () => void }) {
+  const ok = st && st !== "loading" && !("error" in st) ? st : null;
+  const pct = ok?.percent_used ?? 0;
+  return (
+    <article className={`oa-acct${role ? " is-" + role : ""}`}>
+      {role && <span className={`oa-role ${role}`}>{role === "from" ? "Moving from" : "Moving to"}</span>}
+      <div className="oa-acct-top">
+        <span className="oa-avatar" aria-hidden="true">
+          {email[0]?.toUpperCase()}
+        </span>
+        <span className="oa-email" title={email}>
+          {email}
+        </span>
+      </div>
+      {ok ? (
+        <>
+          <p className="oa-used">
+            <b>{ok.used}</b> of {ok.total}
+            <span className={`oa-status s-${ok.status.replace(" ", "-")}`}>{ok.status === "ok" ? `${ok.free} free` : ok.status}</span>
+          </p>
+          <div className="oa-meter" aria-label={`${pct}% used`}>
+            <i className={pct >= 90 ? "is-full" : ""} style={{ width: `${Math.min(100, pct)}%` }} />
+          </div>
+        </>
+      ) : (
+        <p className="oa-used muted">{st && st !== "loading" && "error" in st ? st.error : "Checking storage…"}</p>
+      )}
+      <div className="oa-foot">
+        <span className="oa-break">{ok ? `Drive ${ok.breakdown.drive} · Gmail & Photos ${ok.breakdown.gmail_and_photos}` : ""}</span>
+        <button className="oa-link oa-remove" onClick={onRemove}>
+          {main ? "Sign out" : "Remove"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+/* --------------------------------------------------------------------- */
+
+type Sizes = Record<string, { bytes: number; done: boolean }>;
+const sizeCache = new Map<string, Sizes>(); // per account, survives tab switches
+
+function FoldersTab({ acct, sel, toggle, setSize }: { acct: Account; sel: Map<string, Sel>; toggle: (s: Sel) => void; setSize: (id: string, b: number) => void }) {
+  const [path, setPath] = useState<{ id: string; name: string }[]>([{ id: "root", name: "My Drive" }]);
+  const [folders, setFolders] = useState<FolderEntry[] | null>(null);
+  const [error, setError] = useState("");
+  const [sizes, setSizes] = useState<Sizes>(() => sizeCache.get(acct.e) || {});
+  const here = path[path.length - 1];
+
+  useEffect(() => {
+    let live = true;
+    setFolders(null);
+    setError("");
+    listFolders(acct, here.id)
+      .then((f) => live && setFolders(f))
+      .catch((e) => live && setError(errText(e)));
+    return () => {
+      live = false;
+    };
+  }, [acct, here.id]);
+
+  // Add up folder sizes in the background, three at a time.
+  useEffect(() => {
+    if (!folders) return;
+    let live = true;
+    const todo = folders.filter((f) => !sizes[f.id]?.done).map((f) => f.id);
+    const work = async () => {
+      while (live && todo.length) {
+        const id = todo.shift()!;
+        let st: SizeState | undefined;
+        try {
+          do {
+            const r = await folderSize(acct, id, st, 6000);
+            st = r.state;
+            if (!live) return;
+            setSizes((s) => {
+              const n = { ...s, [id]: { bytes: r.size_bytes, done: r.done } };
+              sizeCache.set(acct.e, n);
+              return n;
+            });
+          } while (st && live);
+        } catch {
+          /* leave the size blank */
+        }
+      }
+    };
+    Promise.all([work(), work(), work()]);
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folders, acct]);
+
+  useEffect(() => {
+    for (const [id, s] of Object.entries(sizes)) if (s.done && sel.has(id)) setSize(id, s.bytes);
+  }, [sizes, sel, setSize]);
+
+  return (
+    <div>
+      <div className="oa-crumbs">
+        {path.map((p, i) => (
+          <span key={p.id}>
+            {i > 0 && <span aria-hidden="true"> / </span>}
+            {i < path.length - 1 ? <button className="oa-link" onClick={() => setPath(path.slice(0, i + 1))}>{p.name}</button> : <b>{p.name}</b>}
+          </span>
+        ))}
+      </div>
+      <p className="oa-hint">Tick folders to move them with everything inside. Open one to pick something deeper.</p>
+      {error && <p className="oa-note bad">{error}</p>}
+      {!folders && !error && <p className="oa-loading">Loading folders…</p>}
+      {folders && folders.length === 0 && <p className="oa-empty">No folders here.</p>}
+      <ul className="oa-list">
+        {folders?.map((f) => {
+          const s = sizes[f.id];
+          const on = sel.has(f.id);
+          return (
+            <li key={f.id} className={on ? "is-on" : ""}>
+              <input
+                type="checkbox"
+                className="ck"
+                aria-label={`Select ${f.name}`}
+                checked={on}
+                onChange={() => toggle({ id: f.id, name: f.name, folder: true, bytes: s?.done ? s.bytes : null })}
+              />
+              <FolderIcon />
+              <button className="oa-name" onClick={() => setPath([...path, { id: f.id, name: f.name }])}>
+                {f.name}
+              </button>
+              {!f.owned && <span className="oa-tag">Shared by {f.owner}</span>}
+              <span className="oa-size">{s ? (s.done ? human(s.bytes) : `${human(s.bytes)}…`) : "…"}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------------- */
+
+function FilesTab({ acct, sel, toggle, mode }: { acct: Account; sel: Map<string, Sel>; toggle: (s: Sel) => void; mode: "large" | "media" }) {
+  const [minMB, setMinMB] = useState(100);
+  const [kind, setKind] = useState<"media" | "images" | "videos">("media");
+  const [items, setItems] = useState<Item[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [state, setState] = useState<"loading" | "more" | "idle">("loading");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const opts = useMemo(
+    () => (mode === "large" ? { kind: "all" as const, min_size_mb: minMB, sort: "largest" as const } : { kind, sort: "largest" as const }),
+    [mode, minMB, kind]
+  );
+
+  const load = useCallback(
+    async (page?: string) => {
+      setState(page ? "more" : "loading");
+      setError("");
+      try {
+        const r = await findFiles(acct, { ...opts, limit: mode === "media" ? 60 : 50, page_token: page });
+        setItems((cur) => (page ? [...cur, ...r.items] : r.items));
+        setNext(r.next_page_token);
+        if (!page) setMessage(r.message);
+      } catch (e) {
+        setError(errText(e));
+      } finally {
+        setState("idle");
+      }
+    },
+    [acct, opts, mode]
+  );
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const allOn = items.length > 0 && items.every((i) => sel.has(i.id));
+  const selectAll = () => {
+    for (const i of items) if (allOn === sel.has(i.id)) toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes });
+  };
+
+  return (
+    <div>
+      <div className="oa-filters">
+        {mode === "large" ? (
+          <label>
+            Bigger than{" "}
+            <select value={minMB} onChange={(e) => setMinMB(Number(e.target.value))}>
+              {[25, 50, 100, 250, 500, 1024].map((n) => (
+                <option key={n} value={n}>
+                  {n >= 1024 ? "1 GB" : `${n} MB`}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <div className="oa-seg" role="group" aria-label="Show">
+            {(
+              [
+                ["media", "All"],
+                ["images", "Photos"],
+                ["videos", "Videos"],
+              ] as const
+            ).map(([k, label]) => (
+              <button key={k} aria-pressed={kind === k} onClick={() => setKind(k)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {items.length > 0 && (
+          <button className="oa-link" onClick={selectAll}>
+            {allOn ? "Unselect all" : `Select all ${items.length}`}
+          </button>
+        )}
+      </div>
+      {message && state !== "loading" && items.length > 0 && <p className="oa-hint">{message}</p>}
+      {error && <p className="oa-note bad">{error}</p>}
+      {state === "loading" && <p className="oa-loading">Looking through {acct.e}…</p>}
+      {state !== "loading" && !items.length && !error && <p className="oa-empty">Nothing like that in {acct.e}.</p>}
+
+      {mode === "large" ? (
+        <ul className="oa-list">
+          {items.map((i) => {
+            const on = sel.has(i.id);
+            return (
+              <li key={i.id} className={on ? "is-on" : ""}>
+                <input type="checkbox" className="ck" aria-label={`Select ${i.name}`} checked={on} onChange={() => toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes })} />
+                <FileIcon />
+                <a className="oa-name" href={i.link} target="_blank" rel="noreferrer">
+                  {i.name}
+                </a>
+                <span className="oa-date">{date(i.modified)}</span>
+                <span className="oa-size">{i.size}</span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <ul className="oa-grid">
+          {items.map((i) => {
+            const on = sel.has(i.id);
+            return (
+              <li key={i.id} className={on ? "is-on" : ""}>
+                <label>
+                  <input type="checkbox" className="ck" aria-label={`Select ${i.name}`} checked={on} onChange={() => toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes })} />
+                  <span className="oa-thumb">
+                    {i.thumb ? <img src={i.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <FileIcon />}
+                    {i.type.startsWith("video/") && <span className="oa-vid">Video</span>}
+                  </span>
+                  <span className="oa-cap">
+                    <span>{i.name}</span>
+                    <b>{i.size}</b>
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {next && (
+        <button className="btn btn-quiet oa-more" onClick={() => load(next)} disabled={state !== "idle"}>
+          {state === "more" ? "Loading…" : "Show more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------------- */
+
+function WaitingTab({ accounts, onAccept }: { accounts: Account[]; onAccept: (a: Account, ids: string[]) => void }) {
+  const [lists, setLists] = useState<Record<string, PendingItem[] | "loading" | { error: string }>>({});
+
+  useEffect(() => {
+    for (const a of accounts) {
+      setLists((l) => ({ ...l, [a.e]: "loading" }));
+      listPending(a)
+        .then((r) => setLists((l) => ({ ...l, [a.e]: r.items })))
+        .catch((e) => setLists((l) => ({ ...l, [a.e]: { error: errText(e) } })));
+    }
+  }, [accounts]);
+
+  return (
+    <div>
+      <p className="oa-hint">
+        Transfers sent from the classic app, or from Drive itself, wait here until the receiving account accepts them. Moves made
+        in this app are accepted straight away, so they never show up here.
+      </p>
+      {accounts.map((a) => {
+        const l = lists[a.e];
+        return (
+          <div key={a.e} className="oa-wait">
+            <h3>{a.e}</h3>
+            {l === "loading" || !l ? (
+              <p className="oa-loading">Checking…</p>
+            ) : "error" in l ? (
+              <p className="oa-note bad">{l.error}</p>
+            ) : l.length === 0 ? (
+              <p className="oa-empty">Nothing waiting.</p>
+            ) : (
+              <>
+                <ul className="oa-list">
+                  {l.slice(0, 50).map((i) => (
+                    <li key={i.id}>
+                      {i.type === "folder" ? <FolderIcon /> : <FileIcon />}
+                      <span className="oa-name">{i.name}</span>
+                      <span className="oa-tag">From {i.from}</span>
+                      <span className="oa-size">{i.type === "folder" ? "" : i.size}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button className="btn btn-main" onClick={() => onAccept(a, l.map((i) => i.id))}>
+                  Accept all {l.length} into {a.e}
+                </button>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------------- */
+
+function Modal({ title, onClose, children }: { title: string; onClose?: () => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose?.();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [onClose]);
+  return (
+    <div className="oa-veil" onClick={(e) => e.target === e.currentTarget && onClose?.()}>
+      <div className="oa-modal" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} ref={ref}>
+        <h2>{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg className="oa-ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M3 6.5A2.5 2.5 0 0 1 5.5 4h3.6c.6 0 1.2.24 1.65.66L12.2 6H18.5A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-11Z" />
+    </svg>
+  );
+}
+
+function FileIcon() {
+  return (
+    <svg className="oa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v4h4" />
+    </svg>
+  );
+}

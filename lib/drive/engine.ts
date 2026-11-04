@@ -1,11 +1,11 @@
-import { deflateRawSync, inflateRawSync } from "node:zlib";
-import { drive, DriveError, type Account } from "./google";
+import { drive, DriveError, type Account } from "./api";
 
 /**
- * Drive work for the MCP connector, ported from apps-script/Code.gs.
+ * Offload's Drive engine, ported from apps-script/Code.gs. It runs in the browser for the web app (/app) and on
+ * the server for the Claude connector, and touches nothing but the Drive API.
  *
- * The connector holds every linked account (2 to 5), so a transfer is requested by the sending account and
- * accepted by the receiving one in the same step: files move without anyone opening the app.
+ * Every linked account (2 to 5) is signed in, so a transfer is requested by the sending account and accepted by
+ * the receiving one in the same step: files move without anyone opening the other account.
  * Accepted items whose old folder the receiver can't see are filed into
  * "Transferred from <sender>" in the receiver's My Drive, exactly as the web app does.
  *
@@ -17,8 +17,8 @@ export const FOLDER_MIME = "application/vnd.google-apps.folder";
 const FILE_FIELDS =
   "id,name,mimeType,ownedByMe,parents,quotaBytesUsed,size,owners(emailAddress),permissions(id,emailAddress,role,pendingOwner)";
 const LIST_FIELDS =
-  "nextPageToken,files(id,name,mimeType,size,quotaBytesUsed,modifiedTime,webViewLink,appProperties,owners(emailAddress),permissions(emailAddress,pendingOwner))";
-const ID_RE = /^[A-Za-z0-9_-]{5,}$/;
+  "nextPageToken,files(id,name,mimeType,size,quotaBytesUsed,modifiedTime,webViewLink,thumbnailLink,appProperties,owners(emailAddress),permissions(emailAddress,pendingOwner))";
+const ID_RE = /^(root|[A-Za-z0-9_-]{5,})$/;
 const CONCURRENCY = 5;
 
 export type DriveFile = {
@@ -31,6 +31,7 @@ export type DriveFile = {
   quotaBytesUsed?: string;
   modifiedTime?: string;
   webViewLink?: string;
+  thumbnailLink?: string;
   appProperties?: Record<string, string>;
   owners?: { emailAddress?: string }[];
   permissions?: { id?: string; emailAddress?: string; role?: string; pendingOwner?: boolean }[];
@@ -92,21 +93,6 @@ function qEsc(s: string): string {
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
-}
-
-/** Opaque continuation tokens: compressed JSON. They hold only Drive IDs and counters, nothing secret. */
-export function packCursor(state: object): string {
-  return deflateRawSync(Buffer.from(JSON.stringify(state))).toString("base64url");
-}
-
-export function unpackCursor<T>(token: string, kind: string): T {
-  try {
-    const state = JSON.parse(inflateRawSync(Buffer.from(token, "base64url")).toString("utf8"));
-    if (state.k !== kind) throw new Error();
-    return state as T;
-  } catch {
-    throw new Error("That continue_token isn't valid. Start again without it.");
-  }
 }
 
 /** Runs `fn` over `items`, at most CONCURRENCY at a time. */
@@ -236,6 +222,8 @@ export async function findFiles(acct: Account, o: FindOpts) {
   };
 }
 
+export type Item = ReturnType<typeof slim>;
+
 function slim(f: DriveFile) {
   const pending = (f.permissions || []).find((p) => p.pendingOwner);
   return {
@@ -246,6 +234,7 @@ function slim(f: DriveFile) {
     size_bytes: sizeOf(f),
     modified: f.modifiedTime || "",
     link: f.webViewLink || "",
+    ...(f.thumbnailLink ? { thumb: f.thumbnailLink } : {}),
     ...(pending ? { pending_transfer_to: pending.emailAddress || "" } : {}),
     ...(f.appProperties?.offloadedFrom
       ? { moved_here_from: f.appProperties.offloadedFrom, moved_on: f.appProperties.offloadedAt || "" }
@@ -257,18 +246,21 @@ function slim(f: DriveFile) {
  * Folder size
  * ===================================================================== */
 
-type SizeState = { k: "size"; queue: string[]; token: string | null; bytes: number; files: number; notOwned: number };
+export type SizeState = { k: "size"; queue: string[]; token: string | null; bytes: number; files: number; notOwned: number };
 
-/** Space the files you own inside a folder (all subfolders included) take up: what a transfer would free. */
-export async function folderSize(acct: Account, folderId: string, cursor?: string) {
+/**
+ * Space the files you own inside a folder (all subfolders included) take up: what a transfer would free.
+ * Works for up to `budgetMs`; if it isn't done, call again with the returned state.
+ */
+export async function folderSize(acct: Account, folderId: string, prev?: SizeState, budgetMs = 30_000) {
   let state: SizeState;
-  if (cursor) state = unpackCursor<SizeState>(cursor, "size");
+  if (prev) state = prev;
   else {
     requireId(folderId);
     state = { k: "size", queue: [folderId], token: null, bytes: 0, files: 0, notOwned: 0 };
   }
   const start = Date.now();
-  while (state.queue.length && Date.now() - start < 30_000) {
+  while (state.queue.length && Date.now() - start < budgetMs) {
     const res = await drive(acct, "GET", "files", {
       q: `'${state.queue[0]}' in parents and trashed = false`,
       pageSize: 1000,
@@ -303,7 +295,7 @@ export async function folderSize(acct: Account, folderId: string, cursor?: strin
     files_you_own: state.files,
     files_owned_by_others: state.notOwned,
     done,
-    ...(done ? {} : { continue_token: packCursor(state), note: "Big folder: call folder_size again with continue_token." }),
+    ...(done ? {} : { state }),
   };
 }
 
@@ -313,7 +305,7 @@ export async function folderSize(acct: Account, folderId: string, cursor?: strin
 
 type Work = { id: string; root: boolean };
 
-type TransferState = {
+export type TransferState = {
   k: "transfer";
   f: string; // sender email
   t: string; // receiver email
@@ -344,19 +336,21 @@ export type TransferResult = {
   errors: { id: string; name: string; detail: string }[];
   continue_token?: string;
   note: string;
+  /** Present while not done: pass it back to carry on. */
+  state?: TransferState;
 };
 
 /**
- * Moves `ids` from `from` to `to`, or carries on the job in `cursor` (which remembers both accounts).
- * `accounts` are all the linked accounts, used to resolve a cursor's sender and receiver.
+ * Moves `ids` from `from` to `to` for up to `budgetMs`, or carries on the job in `state` (which remembers both
+ * accounts). `accounts` are all the linked accounts, used to resolve a saved job's sender and receiver.
  */
 export async function transfer(
   accounts: Account[],
-  opts: { ids?: string[]; from?: Account; to?: Account; cursor?: string; budgetMs: number }
+  opts: { ids?: string[]; from?: Account; to?: Account; state?: TransferState; budgetMs: number }
 ): Promise<TransferResult> {
   let state: TransferState;
-  if (opts.cursor) {
-    state = unpackCursor<TransferState>(opts.cursor, "transfer");
+  if (opts.state) {
+    state = opts.state;
   } else {
     if (!opts.from || !opts.to) throw new Error("Say which account the files move from and which receives them.");
     if (opts.from.e === opts.to.e) throw new Error("The sending and receiving accounts are the same. Pick two different accounts.");
@@ -385,7 +379,7 @@ export async function transfer(
   const sender = accounts.find((x) => x.e === state.f);
   const receiver = accounts.find((x) => x.e === state.t);
   if (!sender || !receiver) {
-    throw new Error("That continue_token is for accounts that aren't linked any more. Start the transfer again.");
+    throw new Error("This transfer is for accounts that aren't linked any more. Start it again.");
   }
   const start = Date.now();
   const timeLeft = () => Date.now() - start < opts.budgetMs;
@@ -505,7 +499,7 @@ export async function transfer(
         `Google can take a few hours to update storage figures. ${sender.e} keeps edit access to what it sent.`
       : "Not finished yet: call transfer_files again with only continue_token to carry on.",
   };
-  if (!done) result.continue_token = packCursor(state);
+  if (!done) result.state = state;
   return result;
 }
 
@@ -533,7 +527,9 @@ function transferMessage(state: TransferState, from: string, to: string, done: b
     const after = Math.max(0, state.u0 - n.bytes);
     const of = state.lim ? ` of ${human(state.lim)}` : "";
     parts.push(
-      `${from} was at ${human(state.u0)}${of}; it should drop to about ${human(after)} once Google updates its numbers, usually within a few hours.`
+      human(after) === human(state.u0)
+        ? `That frees about ${human(n.bytes)} in ${from} once Google updates its numbers, usually within a few hours.`
+        : `${from} was at ${human(state.u0)}${of}; it should drop to about ${human(after)} once Google updates its numbers, usually within a few hours.`
     );
   }
   return parts.join(" ");
@@ -600,4 +596,112 @@ async function transferFolderId(acct: Account, name: string): Promise<string> {
   if (res.files?.length) return res.files[0].id;
   const created = await drive<{ id: string }>(acct, "POST", "files", { fields: "id" }, { name, mimeType: FOLDER_MIME, parents: ["root"] });
   return created.id;
+}
+
+/* ===================================================================== *
+ * Browsing, and transfers waiting to be accepted (web app)
+ * ===================================================================== */
+
+export type FolderEntry = { id: string; name: string; owned: boolean; owner: string };
+
+/** The folders directly inside `parentId` ("root" = My Drive), A to Z, whoever owns them. */
+export async function listFolders(acct: Account, parentId: string): Promise<FolderEntry[]> {
+  requireId(parentId);
+  const out: FolderEntry[] = [];
+  let pageToken: string | undefined;
+  do {
+    const res = await drive(acct, "GET", "files", {
+      q: `'${parentId}' in parents and mimeType = '${FOLDER_MIME}' and trashed = false`,
+      orderBy: "name",
+      pageSize: 200,
+      pageToken,
+      fields: "nextPageToken,files(id,name,ownedByMe,owners(emailAddress))",
+    });
+    for (const f of (res.files || []) as DriveFile[]) out.push({ id: f.id, name: f.name, owned: !!f.ownedByMe, owner: ownerOf(f) });
+    pageToken = res.nextPageToken;
+  } while (pageToken && out.length < 2000);
+  return out;
+}
+
+export type PendingItem = Item & { from: string };
+
+/**
+ * Items someone has asked `acct` to take ownership of, but that it hasn't accepted yet (for example, sent from
+ * the classic app or from Drive itself). Scans what the account can see but doesn't own, newest first.
+ */
+export async function listPending(acct: Account, pageToken?: string, budgetMs = 15_000) {
+  const items: PendingItem[] = [];
+  const start = Date.now();
+  let next: string | undefined = pageToken;
+  let scanned = 0;
+  do {
+    const res = await drive(acct, "GET", "files", {
+      q: "not 'me' in owners and trashed = false",
+      orderBy: "modifiedTime desc",
+      pageSize: 200,
+      pageToken: next,
+      fields: LIST_FIELDS,
+    });
+    for (const f of (res.files || []) as DriveFile[]) {
+      scanned++;
+      const mine = (f.permissions || []).some((p) => (p.emailAddress || "").toLowerCase() === acct.e && p.pendingOwner);
+      if (mine) items.push({ ...slim(f), from: ownerOf(f) });
+    }
+    next = res.nextPageToken;
+  } while (next && items.length < 100 && Date.now() - start < budgetMs);
+  return { account: acct.e, items, scanned, next_page_token: next || null };
+}
+
+export type AcceptResult = { message: string; done: boolean; accepted: number; bytes: number; failed: number; errors: { id: string; name: string; detail: string }[]; remaining: string[] };
+
+/**
+ * Accepts pending transfers to `receiver`, for up to `budgetMs`. Loose items go into "Transferred from <sender>",
+ * as in the classic app; items inside a folder that came over too stay where they are.
+ */
+export async function acceptPending(receiver: Account, ids: string[], budgetMs = 30_000, prev?: AcceptResult): Promise<AcceptResult> {
+  const out: AcceptResult = prev
+    ? { ...prev, remaining: [...prev.remaining], errors: [...prev.errors] }
+    : { message: "", done: false, accepted: 0, bytes: 0, failed: 0, errors: [], remaining: [...new Set(ids)] };
+  const inboxes = new Map<string, Promise<string>>();
+  const inboxFor = (sender: string) => () => {
+    if (!inboxes.has(sender)) inboxes.set(sender, transferFolderId(receiver, `Transferred from ${sender}`));
+    return inboxes.get(sender)!;
+  };
+  const start = Date.now();
+  while (out.remaining.length && Date.now() - start < budgetMs) {
+    const batch = out.remaining.splice(0, CONCURRENCY * 2);
+    await pool(batch, async (id) => {
+      let f: DriveFile | null = null;
+      try {
+        requireId(id);
+        f = await drive<DriveFile>(receiver, "GET", `files/${id}`, { fields: FILE_FIELDS });
+        let perms = f.permissions;
+        if (!perms) {
+          const p = await drive(receiver, "GET", `files/${id}/permissions`, { fields: "permissions(id,emailAddress,role,pendingOwner)" });
+          perms = p.permissions || [];
+        }
+        const mine = (perms || []).find((p) => (p.emailAddress || "").toLowerCase() === receiver.e && p.pendingOwner);
+        if (f.ownedByMe) return; // already accepted
+        if (!mine?.id) throw new Error("Nothing is waiting for this account on that item any more.");
+        const sender = ownerOf(f);
+        await drive(receiver, "PATCH", `files/${id}/permissions/${mine.id}`, { transferOwnership: true, fields: "id" }, { role: "owner" });
+        out.accepted++;
+        out.bytes += sizeOf(f);
+        try {
+          await settle(receiver, f, true, inboxFor(sender), sender);
+        } catch {
+          /* accepted; filing it is a nicety */
+        }
+      } catch (e) {
+        out.failed++;
+        if (out.errors.length < 25) out.errors.push({ id, name: f?.name || id, detail: errMsg(e) });
+      }
+    });
+  }
+  out.done = !out.remaining.length;
+  out.message = out.done
+    ? `Accepted ${count(out.accepted, "item")} (${human(out.bytes)}) into ${receiver.e}.` +
+      (out.failed ? ` ${count(out.failed, "item")} couldn't be accepted: see errors.` : "")
+    : `Still accepting into ${receiver.e}: ${count(out.accepted, "item")} so far (${human(out.bytes)}). Carrying on…`;
+  return out;
 }

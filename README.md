@@ -10,6 +10,7 @@ Pick whole folders, your largest files, or photos and videos, and hand them over
 | --- | --- |
 | `app/`, `components/`, `lib/` | The landing site (Next.js), deployed on Vercel. Landing page, blog (posts live in `lib/posts.ts`), privacy page, SEO metadata, sitemap, robots and manifest. |
 | `apps-script/` | The app itself: `Code.gs`, `Index.html` and `appsscript.json` for a Google Apps Script project. |
+| `app/app`, `components/app`, `lib/drive/` | The Offload web app (beta) at `/app`: the Drive part of Offload running in the browser, and the Drive engine it shares with the connector. |
 | `app/mcp`, `app/oauth`, `app/.well-known`, `lib/mcp/` | Offload for Claude: an MCP connector, so people can move files by asking Claude. Runs on the same Vercel deployment. |
 | `brand/` | Logo, profile picture and banners for LinkedIn, X and link previews. |
 | `public/google0aa1b7412de3fcf6.html` | Google Search Console ownership verification. Keep it, or the site loses verification. |
@@ -62,6 +63,17 @@ How it copies: each photo is downloaded and uploaded in 32 MB pieces, in short c
 The Gmail tab is the former Trash Wizard add-on, rebuilt inside the app. Quick filters (Promotions, Social, Updates, bigger than 10 MB, has attachments, older than a year) and the "Has the words", "Subject contains" and "From" fields build one Gmail search. The tab counts the matches as you type and shows the newest 20. After a two-click confirm it moves them to Trash in batches. Starred and important emails are left alone unless the user unticks that option, and it never trashes more than the number the user confirmed. Nothing is deleted for good: Gmail empties its Trash after 30 days, and the done message links to the Trash for emptying it sooner.
 
 It uses the `https://mail.google.com/` scope, which Google classes as restricted. An unverified app can be used by up to 100 accounts; going past that means Google's restricted-scope verification, including a security assessment.
+
+## Offload web app (beta): `/app`
+
+The Drive part of Offload, rebuilt as a page on this site so it no longer needs Apps Script. It runs entirely in the browser: Google Identity Services gives the tab a short-lived Drive token for each account you sign in with (up to 5), and the page talks to the Drive API directly. Tokens never reach this site's server. Because every account is signed in, a transfer is requested by the sender and accepted by the receiver in one step.
+
+- **Tabs:** Folders (browse My Drive, sizes added up in the background), Large files, Photos & videos (thumbnails), and Waiting to accept (transfers started elsewhere, such as the classic app, accepted in one click).
+- **Shared engine:** `lib/drive/engine.ts` is the same code the Claude connector uses. `lib/drive/api.ts` is the Drive caller; the browser plugs in its tokens via `lib/drive/browserAuth.ts`, the server via `lib/mcp/google.ts`.
+- **Expired sign-ins:** tokens last about an hour. If one runs out mid-job, the job pauses and a banner asks for one click on Continue (Google's window may only open on a click), then it carries on.
+- **Gmail cleanup and Google Photos** are still in the classic Apps Script app, linked from the top of the page.
+
+Setup: it uses the same `GOOGLE_CLIENT_ID` as the connector. In Google Cloud, that client needs your site under **Authorised JavaScript origins** (e.g. `https://offload-five-mu.vercel.app`), and every account that signs in must be a test user while the consent screen is in Testing.
 
 ## Offload for Claude (MCP connector)
 

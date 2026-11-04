@@ -70,6 +70,21 @@ export default function Privacy() {
             emptying the Trash.
           </p>
 
+          <h2>The Offload web app (beta)</h2>
+          <p>
+            The web app at /app does the Drive part of Offload straight from your browser. When you sign in, Google gives your
+            browser tab a short-lived access token for your Google Drive. That token stays in the tab (in memory, and in the
+            tab&rsquo;s session storage so a reload doesn&rsquo;t sign you out) and is only ever sent to Google. This
+            website&rsquo;s server never receives it, and never sees your files, their names or your storage figures. Closing the
+            tab, choosing Sign out, or waiting about an hour ends it.
+          </p>
+          <p>
+            It changes only what you ask for: it moves the files and folders you pick from one of your accounts to another by
+            transferring ownership, accepts the transfer with the receiving account, files loose items into a folder named after
+            the sender, and labels each moved item with the account it came from and the date (a private note only Offload can
+            see). It doesn&rsquo;t delete anything and doesn&rsquo;t send emails.
+          </p>
+
           <h2>Offload for Claude</h2>
           <p>
             Offload also works as a connector in Claude, so you can ask Claude to move Drive files for you. When you add it, this

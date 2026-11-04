@@ -1,4 +1,7 @@
-/** Google sign-in and Drive API calls for the MCP connector. */
+/** Google sign-in for the Claude connector (server side): OAuth code exchange and refresh-token access. */
+import { setTokenSource, type Account } from "@/lib/drive/api";
+
+export type { Account };
 
 export const GOOGLE_SCOPES = [
   "openid",
@@ -8,10 +11,7 @@ export const GOOGLE_SCOPES = [
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const DRIVE = "https://www.googleapis.com/drive/v3";
 
-/** A linked Google account: its email and Google refresh token. */
-export type Account = { e: string; r: string };
 
 /** Thrown when Google no longer accepts an account's refresh token: the connector has to be reconnected. */
 export class ReconnectError extends Error {
@@ -92,9 +92,9 @@ function remember(refresh: string, access: string, expiresIn: number) {
   if (accessCache.size > 500) accessCache.delete(accessCache.keys().next().value as string);
 }
 
-export async function accessToken(acct: Account): Promise<string> {
+export async function accessToken(acct: Account, force = false): Promise<string> {
   const hit = accessCache.get(acct.r);
-  if (hit && hit.until > Date.now()) return hit.token;
+  if (hit && hit.until > Date.now() && !force) return hit.token;
   const { id, secret } = client();
   const res = await fetch(TOKEN_URL, {
     method: "POST",
@@ -110,47 +110,5 @@ export async function accessToken(acct: Account): Promise<string> {
   return body.access_token;
 }
 
-export class DriveError extends Error {
-  constructor(message: string, readonly status: number, readonly reason: string) {
-    super(message);
-  }
-}
-
-const RETRY_REASONS = new Set(["rateLimitExceeded", "userRateLimitExceeded", "backendError", "internalError"]);
-
-/**
- * Calls the Drive API as `acct`. Retries rate limits and Google-side errors with backoff.
- * `path` is relative to drive/v3, e.g. "files/ID/permissions".
- */
-export async function drive<T = any>(
-  acct: Account,
-  method: "GET" | "POST" | "PATCH",
-  path: string,
-  query?: Record<string, string | number | boolean | undefined>,
-  body?: object
-): Promise<T> {
-  const url = new URL(`${DRIVE}/${path}`);
-  for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
-  for (let attempt = 0; ; attempt++) {
-    const token = await accessToken(acct);
-    const res = await fetch(url, {
-      method,
-      headers: { authorization: `Bearer ${token}`, ...(body ? { "content-type": "application/json" } : {}) },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    if (res.ok) return (res.status === 204 ? {} : await res.json()) as T;
-    const err = await res.json().catch(() => ({}));
-    const reason: string = err?.error?.errors?.[0]?.reason || err?.error?.status || "";
-    const message: string = err?.error?.message || `Drive API error ${res.status}`;
-    if (res.status === 401 && attempt === 0) {
-      accessCache.delete(acct.r);
-      continue;
-    }
-    const retryable = res.status === 429 || res.status >= 500 || (res.status === 403 && RETRY_REASONS.has(reason));
-    if (retryable && attempt < 4) {
-      await new Promise((r) => setTimeout(r, 500 * 2 ** attempt + Math.random() * 300));
-      continue;
-    }
-    throw new DriveError(message, res.status, reason);
-  }
-}
+// On the server, Drive calls get their tokens by refreshing the account's refresh token.
+setTokenSource(accessToken);

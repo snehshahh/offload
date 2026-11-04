@@ -1,7 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { count, describeFind, findFiles, folderSize, human, listing, storage, transfer } from "./drive";
+import { count, describeFind, findFiles, folderSize, human, listing, storage, transfer } from "@/lib/drive/engine";
+import type { SizeState, TransferState } from "@/lib/drive/engine";
+import { packCursor, unpackCursor } from "./cursor";
 import type { Account } from "./google";
+import "./google"; // registers the server-side Google token source
 
 /** How long one transfer_files call works before handing back a continue_token. */
 const TRANSFER_BUDGET_MS = 40_000;
@@ -161,7 +164,9 @@ export function buildServer(accounts: Account[]): McpServer {
     async (args) => {
       try {
         const acct = args.account ? find(args.account) : main;
-        return text(await folderSize(acct, args.folder_id, args.continue_token));
+        const prev = args.continue_token ? unpackCursor<SizeState>(args.continue_token, "size") : undefined;
+        const { state, ...res } = await folderSize(acct, args.folder_id, prev);
+        return text(state ? { ...res, continue_token: packCursor(state), note: "Big folder: call folder_size again with continue_token." } : res);
       } catch (e) {
         return failure(e);
       }
@@ -203,7 +208,9 @@ export function buildServer(accounts: Account[]): McpServer {
             throw new Error(`Which account should receive the files? Pass to_account: one of ${options}. get_accounts shows which has the most room.`);
           }
         }
-        return text(await transfer(accounts, { ids: args.ids, from, to, cursor: args.continue_token, budgetMs: TRANSFER_BUDGET_MS }));
+        const prev = args.continue_token ? unpackCursor<TransferState>(args.continue_token, "transfer") : undefined;
+        const { state, ...res } = await transfer(accounts, { ids: args.ids, from, to, state: prev, budgetMs: TRANSFER_BUDGET_MS });
+        return text(state ? { ...res, continue_token: packCursor(state) } : res);
       } catch (e) {
         return failure(e);
       }
