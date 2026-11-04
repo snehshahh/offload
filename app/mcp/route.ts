@@ -20,7 +20,7 @@ async function handle(req: Request) {
     });
   }
 
-  const server = buildServer(accounts);
+  const server = buildServer(accounts, origin(req));
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   const res = await transport.handleRequest(req);

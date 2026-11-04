@@ -29,8 +29,27 @@ function failure(e: unknown) {
   return { isError: true, content: [{ type: "text" as const, text: e instanceof Error ? e.message : String(e) }] };
 }
 
-export function buildServer(accounts: Account[]): McpServer {
-  const server = new McpServer({ name: "offload", title: "Offload", version: "1.1.0" }, { instructions: INSTRUCTIONS });
+/** `site` is this deployment's address (e.g. https://offload.example), so Claude can show Offload's icon and link. */
+export function buildServer(accounts: Account[], site?: string): McpServer {
+  const server = new McpServer(
+    {
+      name: "offload",
+      title: "Offload",
+      version: "1.1.0",
+      description: "Move Google Drive files between your Google accounts and see how much space each one has.",
+      ...(site
+        ? {
+            websiteUrl: site,
+            icons: [
+              { src: `${site}/icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },
+              { src: `${site}/icon-192.png`, mimeType: "image/png", sizes: ["192x192"] },
+              { src: `${site}/icon.svg`, mimeType: "image/svg+xml", sizes: ["any"] },
+            ],
+          }
+        : {}),
+    },
+    { instructions: INSTRUCTIONS }
+  );
   const main = accounts[0];
   const list = accounts.map((x) => x.e).join(", ");
 
