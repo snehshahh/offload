@@ -288,3 +288,4 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
 .post-chat .msg-text { display:block; }
 .post-chat .msg.you b, .post-chat .msg.you code { color:#fff; }
 .post-chat .tool { display:block; width:max-content; }
+.nowrap { white-space:nowrap; }

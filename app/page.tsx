@@ -20,7 +20,7 @@ const jsonLd = {
       "@type": "WebApplication",
       "@id": `${SITE_URL}/#app`,
       name: SITE_NAME,
-      alternateName: ["Offload Google Drive storage manager", "Offload bulk transfer tool"],
+      alternateName: ["Offload AI storage manager", "Offload Google Drive storage manager", "Offload bulk transfer tool"],
       url: `${SITE_URL}/`,
       description: SITE_DESCRIPTION,
       applicationCategory: "UtilitiesApplication",
@@ -30,6 +30,8 @@ const jsonLd = {
       isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       featureList: [
+        "Free AI-powered Google storage manager for all your Google accounts",
+        "Works with ChatGPT, Claude and other AI assistants: check storage, find files and move them by asking",
         "Free Google Drive storage manager",
         "Bulk transfer of Google Drive files to another Google account",
         "Transfer ownership of whole Google Drive folders, including subfolders",
@@ -113,12 +115,12 @@ export default function Home() {
                 Move files by asking Claude or ChatGPT
                 <span aria-hidden="true">&rarr;</span>
               </a>
-              <p className="kicker">Free Google Drive storage manager</p>
+              <p className="kicker">Free AI-powered Google storage manager</p>
               <h1 id="hero-title">Move Google Drive files to your <mark>other account</mark></h1>
               <p className="lede">
-                Google storage full? Offload bulk moves your folders, large files and photos to another Google account you
-                own, and clears out Gmail in bulk, so you can manage your free storage across both. The space frees up as soon
-                as the other account accepts.
+                Google storage full? Offload is a free, <span className="nowrap">AI-powered</span> storage manager for all your Google accounts. It bulk moves
+                your folders, large files and photos to another account you own and clears out Gmail in bulk, in the app or by
+                asking ChatGPT or Claude. The space frees up as soon as the other account accepts.
               </p>
               <div className="cta">
                 <a className="btn btn-main btn-lg" href={APP_URL}>
@@ -131,6 +133,7 @@ export default function Home() {
               <ul className="assure" aria-label="At a glance">
                 <li>Free tool</li>
                 <li>Bulk transfer</li>
+                <li>Works with ChatGPT and Claude</li>
                 <li>Nothing to install</li>
                 <li>Files never leave Google</li>
               </ul>
@@ -156,7 +159,7 @@ export default function Home() {
           </section>
 
           <section className="block" aria-labelledby="what-title">
-            <h2 id="what-title">One free tool to manage your Google storage</h2>
+            <h2 id="what-title">One <span className="nowrap">AI-powered</span> tool to manage your Google storage</h2>
             <div className="features">
               {FEATURES.map((f) => (
                 <div className="feat" key={f.title}>
@@ -311,7 +314,7 @@ export default function Home() {
           <section className="band" aria-labelledby="band-title">
             <div>
               <h2 id="band-title">Free up your Google storage today</h2>
-              <p>A free bulk storage manager for your Google accounts. A few clicks, and the &ldquo;storage full&rdquo; warning is gone.</p>
+              <p>A free, <span className="nowrap">AI-powered</span> storage manager for your Google accounts. A few clicks or one question, and the &ldquo;storage full&rdquo; warning is gone.</p>
             </div>
             <a className="btn btn-light btn-lg" href={APP_URL}>
               Open Offload

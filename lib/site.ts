@@ -1,8 +1,8 @@
 export const SITE_NAME = "Offload";
-export const SITE_TITLE = "Offload: Free Google Drive Storage Manager & Bulk Transfer Tool";
+export const SITE_TITLE = "Offload: Free AI-Powered Google Drive Storage Manager & Bulk Transfer";
 export const SITE_SHORT_TITLE = "Move Google Drive files to your other account";
 export const SITE_DESCRIPTION =
-  "Free tool to manage Google storage. Bulk move Drive folders, large files and photos to your other Google account, clean up Gmail in bulk, and free up storage in minutes. Nothing to install, files never leave Google.";
+  "Free AI-powered Google storage manager. Bulk move Drive folders, large files and photos to your other Google account, clean up Gmail in bulk, and free up storage in minutes, in the app or by asking ChatGPT or Claude. Nothing to install, files never leave Google.";
 
 /** Public address of the site. Set NEXT_PUBLIC_SITE_URL for a custom domain; Vercel's production address is used otherwise. */
 export const SITE_URL = (() => {
