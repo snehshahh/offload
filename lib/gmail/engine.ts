@@ -2,7 +2,7 @@ import { gmail, type Account } from "@/lib/drive/api";
 import { count } from "@/lib/drive/engine";
 
 /**
- * Gmail cleanup for the Offload web app, ported from apps-script/Code.gs.
+ * Gmail cleanup for the Offload web app.
  *
  * Quick filters plus free-text fields build one Gmail search, which is counted and previewed. Trashing runs in
  * slices that always search from the top (trashed mail drops out of the results), never trash more than the person

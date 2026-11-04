@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import OffloadApp from "@/components/app/OffloadApp";
-import { CLASSIC_APP_URL } from "@/lib/site";
 import "./app.css";
 
 export const metadata: Metadata = {
@@ -14,5 +13,5 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default function AppPage() {
-  return <OffloadApp clientId={process.env.GOOGLE_CLIENT_ID || ""} classicUrl={CLASSIC_APP_URL} />;
+  return <OffloadApp clientId={process.env.GOOGLE_CLIENT_ID || ""} />;
 }

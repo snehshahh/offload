@@ -16,11 +16,6 @@ export const SITE_URL = (() => {
 /** The Offload web app, on this site. Every "Open Offload" button links here. */
 export const APP_URL = "/app";
 
-/** The classic Google Apps Script app, linked from the web app as a fallback. */
-export const CLASSIC_APP_URL =
-  process.env.NEXT_PUBLIC_CLASSIC_APP_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  "https://script.google.com/macros/s/AKfycbyWOVB_xmZ5VivLYiY6_wk1kyqIDwlzB6RDjTzhjxypJreil_V7naw8giFFXvLr4y5oeA/exec";
 
 export const FAQS: { q: string; a: string }[] = [
   {

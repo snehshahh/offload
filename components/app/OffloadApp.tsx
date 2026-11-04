@@ -50,7 +50,7 @@ type Job =
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const date = (iso: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 
-export default function OffloadApp({ clientId, classicUrl }: { clientId: string; classicUrl: string }) {
+export default function OffloadApp({ clientId }: { clientId: string }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [ready, setReady] = useState(false);
   const [stor, setStor] = useState<Record<string, Store | { error: string } | "loading">>({});
@@ -235,8 +235,8 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
           <span>Offload</span>
           <span className="oa-beta">Beta</span>
         </a>
-        <a className="oa-classic" href={classicUrl}>
-          Classic app <span aria-hidden="true">&rarr;</span>
+        <a className="oa-toplink" href="/privacy">
+          Privacy
         </a>
       </header>
 
@@ -785,7 +785,7 @@ function WaitingTab({ accounts, onAccept }: { accounts: Account[]; onAccept: (a:
   return (
     <div>
       <p className="oa-hint">
-        Transfers sent from the classic app, or from Drive itself, wait here until the receiving account accepts them. Moves made
+        Transfers sent from Drive itself, or by someone else, wait here until the receiving account accepts them. Moves made
         in this app are accepted straight away, so they never show up here.
       </p>
       {accounts.map((a) => {

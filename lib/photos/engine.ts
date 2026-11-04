@@ -3,7 +3,7 @@ import { count, human } from "@/lib/drive/engine";
 import type { RelayRequest, RelayResponse } from "./relay";
 
 /**
- * Google Photos copy for the Offload web app, ported from apps-script/Code.gs. Google Photos has no ownership
+ * Google Photos copy for the Offload web app. Google Photos has no ownership
  * transfer, so photos are copied: the source account picks them in Google's own picker (Photos Picker API), each one
  * is copied in pieces into the receiving account's Google Photos (Photos Library API, add-only), and they're gathered
  * in an album "Copied from <email>". The originals stay where they are; the person deletes them afterwards.

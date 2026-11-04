@@ -1,7 +1,7 @@
 import { drive, DriveError, type Account } from "./api";
 
 /**
- * Offload's Drive engine, ported from apps-script/Code.gs. It runs in the browser for the web app (/app) and on
+ * Offload's Drive engine. It runs in the browser for the web app (/app) and on
  * the server for the Claude connector, and touches nothing but the Drive API.
  *
  * Every linked account (2 to 5) is signed in, so a transfer is requested by the sending account and accepted by
@@ -627,7 +627,7 @@ export type PendingItem = Item & { from: string };
 
 /**
  * Items someone has asked `acct` to take ownership of, but that it hasn't accepted yet (for example, sent from
- * the classic app or from Drive itself). Scans what the account can see but doesn't own, newest first.
+ * Drive itself or by someone else). Scans what the account can see but doesn't own, newest first.
  */
 export async function listPending(acct: Account, pageToken?: string, budgetMs = 15_000) {
   const items: PendingItem[] = [];
@@ -656,7 +656,7 @@ export type AcceptResult = { message: string; done: boolean; accepted: number; b
 
 /**
  * Accepts pending transfers to `receiver`, for up to `budgetMs`. Loose items go into "Transferred from <sender>",
- * as in the classic app; items inside a folder that came over too stay where they are.
+ * like moved items; items inside a folder that came over too stay where they are.
  */
 export async function acceptPending(receiver: Account, ids: string[], budgetMs = 30_000, prev?: AcceptResult): Promise<AcceptResult> {
   const out: AcceptResult = prev
