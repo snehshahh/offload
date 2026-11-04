@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/Chrome";
 import { PostBody } from "@/components/RichText";
+import { PostCover } from "@/components/PostCover";
 import { POSTS, formatDate, getPost, readingMinutes } from "@/lib/posts";
 import { APP_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -65,6 +66,10 @@ export default async function PostPage({ params }: Props) {
   const related = [...POSTS.filter((p) => p.topic === post.topic), ...POSTS.filter((p) => p.topic !== post.topic)]
     .filter((p) => p.slug !== post.slug)
     .slice(0, 3);
+  // The sidebar: other guides, newest first, skipping the ones already under "Keep reading".
+  const more = POSTS.filter((p) => p.slug !== post.slug && !related.includes(p))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 6);
 
   return (
     <div className="site">
@@ -72,17 +77,46 @@ export default async function PostPage({ params }: Props) {
       <div className="wrap">
         <Header />
         <main>
-          <article className="prose post">
-            <nav className="crumbs" aria-label="Breadcrumb">
-              <Link href="/blog">Blog</Link> <span aria-hidden="true">/</span> {post.topic}
-            </nav>
-            <h1>{post.title}</h1>
-            <p className="post-meta">
-              {formatDate(post.date)} · {readingMinutes(post)} min read
-            </p>
-            <p className="post-lede">{post.description}</p>
-            <PostBody blocks={post.body} />
-          </article>
+          <div className="post-layout">
+            <article className="prose post">
+              <nav className="crumbs" aria-label="Breadcrumb">
+                <Link href="/blog">Blog</Link> <span aria-hidden="true">/</span> {post.topic}
+              </nav>
+              <h1>{post.title}</h1>
+              <p className="post-meta">
+                {formatDate(post.date)} · {readingMinutes(post)} min read
+              </p>
+              <p className="post-lede">{post.description}</p>
+              <PostBody blocks={post.body} />
+            </article>
+
+            <aside className="post-side" aria-labelledby="side-title">
+              <div className="side-cta">
+                <p className="side-cta-title">Storage full?</p>
+                <p>Move Drive files and photos to your other Google account. Free, nothing to install.</p>
+                <a className="btn btn-main" href={APP_URL}>
+                  Open Offload
+                </a>
+              </div>
+              <h2 id="side-title" className="side-title">More guides</h2>
+              <ul className="side-list">
+                {more.map((p) => (
+                  <li key={p.slug}>
+                    <Link href={`/blog/${p.slug}`} className="side-post">
+                      <PostCover post={p} />
+                      <div>
+                        <span className="side-topic">{p.topic}</span>
+                        <span className="side-post-title">{p.title}</span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/blog" className="side-all">
+                All guides →
+              </Link>
+            </aside>
+          </div>
 
           <section className="band" aria-labelledby="band-title">
             <div>
@@ -99,8 +133,11 @@ export default async function PostPage({ params }: Props) {
             <div className="post-grid">
               {related.map((p) => (
                 <Link key={p.slug} href={`/blog/${p.slug}`} className="post-card">
-                  <h3>{p.title}</h3>
-                  <p>{p.description}</p>
+                  <PostCover post={p} />
+                  <div className="post-card-body">
+                    <h3>{p.title}</h3>
+                    <p>{p.description}</p>
+                  </div>
                 </Link>
               ))}
             </div>

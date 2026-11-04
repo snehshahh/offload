@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Header, Footer } from "@/components/Chrome";
+import { PostCover } from "@/components/PostCover";
 import { POSTS, TOPICS, formatDate, readingMinutes } from "@/lib/posts";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -27,6 +28,7 @@ const jsonLd = {
 };
 
 export default function Blog() {
+  const latest = [...POSTS].sort((a, b) => b.date.localeCompare(a.date))[0];
   return (
     <div className="site">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -34,11 +36,23 @@ export default function Blog() {
         <Header />
         <main className="blog">
           <header className="blog-head">
-            <p className="kicker">Blog</p>
-            <h1>Guides to a less full Google account</h1>
-            <p className="lede">
-              How to free up Google storage, move Drive files and photos between accounts, and clean up Gmail in bulk.
-            </p>
+            <div>
+              <p className="kicker">Blog</p>
+              <h1>Guides to a less full Google account</h1>
+              <p className="lede">
+                How to free up Google storage, move Drive files and photos between accounts, and clean up Gmail in bulk.
+              </p>
+            </div>
+            <Link href={`/blog/${latest.slug}`} className="post-card featured">
+              <PostCover post={latest} />
+              <div className="post-card-body">
+                <span className="side-topic">Latest</span>
+                <h3>{latest.title}</h3>
+                <span className="post-meta">
+                  {formatDate(latest.date)} · {readingMinutes(latest)} min read
+                </span>
+              </div>
+            </Link>
           </header>
           {TOPICS.map((topic) => {
             const posts = POSTS.filter((p) => p.topic === topic);
@@ -49,11 +63,14 @@ export default function Blog() {
                 <div className="post-grid">
                   {posts.map((p) => (
                     <Link key={p.slug} href={`/blog/${p.slug}`} className="post-card">
-                      <h3>{p.title}</h3>
-                      <p>{p.description}</p>
-                      <span className="post-meta">
-                        {formatDate(p.date)} · {readingMinutes(p)} min read
-                      </span>
+                      <PostCover post={p} />
+                      <div className="post-card-body">
+                        <h3>{p.title}</h3>
+                        <p>{p.description}</p>
+                        <span className="post-meta">
+                          {formatDate(p.date)} · {readingMinutes(p)} min read
+                        </span>
+                      </div>
                     </Link>
                   ))}
                 </div>
