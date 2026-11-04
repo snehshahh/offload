@@ -113,7 +113,7 @@ export function page(o: { step?: string; title: string; body: string; button?: B
   @media (prefers-color-scheme: dark) { :root { --bg:#15140F; --card:#1F1E18; --text:#F2EEE2; --muted:#A9A390; --line:#36332A; --accent:#FBBC04; --accent-text:#1C1B17; --ok:#F7CB4D; --bad:#F0A29C; } }
   * { box-sizing: border-box; }
   body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px 16px; background:var(--bg); color:var(--text);
-         font:16px/1.55 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+         font:16px/1.55 "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   main { width:100%; max-width:440px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:28px; }
   .brand { display:flex; align-items:center; gap:10px; font-weight:650; margin-bottom:20px; }
   .brand img { width:28px; height:28px; border-radius:7px; }
