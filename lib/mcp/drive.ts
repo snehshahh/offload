@@ -52,6 +52,36 @@ export function human(bytes: number): string {
   return `${v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1).replace(/\.0$/, "")} ${units[i]}`;
 }
 
+/** "1 file", "3 files". */
+export function count(n: number, one: string, many = one + "s"): string {
+  return `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
+}
+
+/** "a, b and c" */
+export function listing(parts: string[]): string {
+  return parts.length < 2 ? parts.join("") : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+const KIND_NOUN: Record<FindOpts["kind"], [string, string]> = {
+  all: ["file", "files"],
+  images: ["image", "images"],
+  videos: ["video", "videos"],
+  media: ["photo or video", "photos and videos"],
+  documents: ["Google file", "Google files"],
+  folders: ["folder", "folders"],
+};
+
+/** "3 videos over 100 MB matching "wedding"" */
+export function describeFind(o: Pick<FindOpts, "kind" | "min_size_mb" | "name_contains" | "folder_id" | "moved_from">, n: number) {
+  const [one, many] = KIND_NOUN[o.kind];
+  let d = count(n, one, many);
+  if (o.min_size_mb) d += ` over ${o.min_size_mb.toLocaleString("en-US")} MB`;
+  if (o.name_contains) d += ` matching "${o.name_contains}"`;
+  if (o.folder_id) d += " in that folder";
+  if (o.moved_from?.length) d += " that Offload moved here";
+  return d;
+}
+
 function ownerOf(f: DriveFile): string {
   return (f.owners?.[0]?.emailAddress || "unknown").toLowerCase();
 }
@@ -187,8 +217,18 @@ export async function findFiles(acct: Account, o: FindOpts) {
   } while (pageToken && items.length < o.limit && Date.now() - start < 20_000);
 
   const total = items.reduce((s, f) => s + f.size_bytes, 0);
+  let message: string;
+  if (!items.length) message = `No ${describeFind(o, 2).replace(/^2 /, "")} in ${acct.e}.`;
+  else {
+    message = `${describeFind(o, items.length)} in ${acct.e}`;
+    if (o.kind !== "folders") message += `, ${human(total)} in total`;
+    const top = items[0];
+    if (items.length > 1 && o.kind !== "folders" && sort === "largest") message += `. Biggest: ${top.name} (${top.size})`;
+    message += next ? `. These are the first ${items.length}; there are more.` : ".";
+  }
   return {
     account: acct.e,
+    message,
     count: items.length,
     total_size: human(total),
     items,
@@ -249,7 +289,14 @@ export async function folderSize(acct: Account, folderId: string, cursor?: strin
     }
   }
   const done = !state.queue.length;
+  const others = state.notOwned
+    ? ` ${count(state.notOwned, "file")} in it belong${state.notOwned === 1 ? "s" : ""} to someone else and would stay put.`
+    : "";
+  const message = done
+    ? `Moving this folder would free about ${human(state.bytes)} in ${acct.e} (${count(state.files, "file")} it owns).${others}`
+    : `Still adding up: ${human(state.bytes)} in ${count(state.files, "file")} so far. Carrying on…`;
   return {
+    message,
     folder_id: folderId,
     size: human(state.bytes),
     size_bytes: state.bytes,
@@ -276,11 +323,14 @@ type TransferState = {
   queue: { id: string; loose: boolean }[];
   cur: { id: string; pt: string | null; loose: boolean } | null;
   inbox: string | null; // receiver's "Transferred from <sender>" folder, once known
+  u0?: number; // sender's storage use (bytes) when the job started, for the "should drop to" estimate
+  lim?: number | null; // sender's storage limit
   n: { moved: number; bytes: number; already: number; notOwned: number; failed: number; folders: number };
   errors: { id: string; name: string; detail: string }[];
 };
 
 export type TransferResult = {
+  message: string;
   done: boolean;
   from: string;
   to: string;
@@ -324,6 +374,13 @@ export async function transfer(
       n: { moved: 0, bytes: 0, already: 0, notOwned: 0, failed: 0, folders: 0 },
       errors: [],
     };
+    try {
+      const q = (await drive(opts.from, "GET", "about", { fields: "storageQuota" })).storageQuota || {};
+      state.u0 = Number(q.usage) || 0;
+      state.lim = q.limit ? Number(q.limit) : null;
+    } catch {
+      /* the estimate is a nicety; the move doesn't need it */
+    }
   }
   const sender = accounts.find((x) => x.e === state.f);
   const receiver = accounts.find((x) => x.e === state.t);
@@ -431,6 +488,7 @@ export async function transfer(
 
   const done = !state.todo.length && !state.queue.length && !state.cur;
   const result: TransferResult = {
+    message: transferMessage(state, sender.e, receiver.e, done),
     done,
     from: sender.e,
     to: receiver.e,
@@ -449,6 +507,36 @@ export async function transfer(
   };
   if (!done) result.continue_token = packCursor(state);
   return result;
+}
+
+/** The sentence Claude can pass on as is: what moved, what didn't, and what happens next. */
+function transferMessage(state: TransferState, from: string, to: string, done: boolean): string {
+  const n = state.n;
+  const what = listing([
+    ...(n.moved || !n.folders ? [count(n.moved, "file")] : []),
+    ...(n.folders ? [count(n.folders, "folder")] : []),
+  ]);
+  if (!done) {
+    return `Still moving from ${from} to ${to}: ${what} so far (${human(n.bytes)}). Carrying on…`;
+  }
+  const parts: string[] = [];
+  parts.push(
+    n.moved || n.folders
+      ? `Moved ${what} (${human(n.bytes)}) from ${from} to ${to}.`
+      : `Nothing needed moving from ${from} to ${to}.`
+  );
+  if (n.already) parts.push(`${count(n.already, "item was", "items were")} already in ${to}.`);
+  if (n.notOwned) parts.push(`Skipped ${count(n.notOwned, "item")} that belong${n.notOwned === 1 ? "s" : ""} to someone else.`);
+  if (n.failed) parts.push(`${count(n.failed, "item")} couldn't be moved: see errors.`);
+  if (state.inbox) parts.push(`Loose items are in "Transferred from ${from}" in ${to}'s My Drive.`);
+  if (n.bytes && state.u0) {
+    const after = Math.max(0, state.u0 - n.bytes);
+    const of = state.lim ? ` of ${human(state.lim)}` : "";
+    parts.push(
+      `${from} was at ${human(state.u0)}${of}; it should drop to about ${human(after)} once Google updates its numbers, usually within a few hours.`
+    );
+  }
+  return parts.join(" ");
 }
 
 /** Sender asks the receiver to become owner; receiver accepts straight away. */

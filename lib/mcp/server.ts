@@ -1,12 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { findFiles, folderSize, human, storage, transfer } from "./drive";
+import { count, describeFind, findFiles, folderSize, human, listing, storage, transfer } from "./drive";
 import type { Account } from "./google";
 
 /** How long one transfer_files call works before handing back a continue_token. */
 const TRANSFER_BUDGET_MS = 40_000;
 
-const INSTRUCTIONS = `Offload moves Google Drive files between the person's own Google accounts (2 to 5 of them, linked when the connector was added) by transferring ownership, which frees storage in the account they leave. The first linked account is their main account.
+const INSTRUCTIONS = `Every result starts with "message": a plain summary you can pass on to the person as it is, adding detail from the rest of the result where it helps.
+
+Offload moves Google Drive files between the person's own Google accounts (2 to 5 of them, linked when the connector was added) by transferring ownership, which frees storage in the account they leave. The first linked account is their main account.
 
 Storage: get_accounts returns every account's storage. Show it as a small table (account, used, total, free, % used, status) followed by one line on which account has the most room. Google can take a few hours to update these numbers after a move.
 
@@ -55,7 +57,19 @@ export function buildServer(accounts: Account[]): McpServer {
         const sum = (f: (s: (typeof all)[number]) => number) => limited.reduce((n, s) => n + f(s), 0);
         const byFree = [...limited].sort((x, y) => y.bytes.free! - x.bytes.free!);
         const byUse = [...limited].sort((x, y) => y.percent_used! - x.percent_used!);
+        const unlimited = all.filter((s) => s.bytes.total === null).map((s) => s.email);
+        const totalLine = limited.length
+          ? `${human(sum((s) => s.bytes.used))} used of ${human(sum((s) => s.bytes.total!))}, ${human(sum((s) => s.bytes.free!))} free` +
+            (unlimited.length ? ` (not counting ${listing(unlimited)}, which ${unlimited.length === 1 ? "has" : "have"} unlimited storage)` : "")
+          : "all on unlimited plans";
+        const tight = all.filter((s) => s.status === "full" || s.status === "almost full");
+        const message = [
+          `${count(all.length, "linked account")}: ${totalLine}.`,
+          ...tight.map((s) => `${s.email} is ${s.status} (${s.percent_used}%).`),
+          ...(byFree[0] && all.length > 1 ? [`${byFree[0].email} has the most room (${byFree[0].free} free).`] : []),
+        ].join(" ");
         return text({
+          message,
           accounts: rows,
           total: limited.length
             ? {
@@ -111,7 +125,16 @@ export function buildServer(accounts: Account[]): McpServer {
           })
         );
         if (results.length === 1) return text(results[0]);
+        const found = results.reduce((n, r) => n + r.count, 0);
+        const filter = { ...args, moved_from: moved_only ? ["x"] : undefined };
+        const where = results.filter((r) => r.count).map((r) => `${r.count} in ${r.account}${args.kind === "folders" ? "" : ` (${r.total_size})`}`);
+        const empty = results.filter((r) => !r.count).map((r) => r.account);
+        const message = found
+          ? `Found ${describeFind(filter, found)}: ${listing(where)}.` + (empty.length ? ` Nothing in ${listing(empty)}.` : "") +
+            (results.some((r) => r.next_page_token) ? " There are more; ask for the next page of an account to see them." : "")
+          : `No ${describeFind(filter, 2).replace(/^2 /, "")} in any linked account.`;
         return text({
+          message,
           searched: accounts.map((x) => x.e),
           note: "Each file is in exactly one account: the one that owns it. Results are per account.",
           results,

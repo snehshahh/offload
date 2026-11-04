@@ -78,6 +78,8 @@ Tools:
 | `folder_size` | Space the files an account owns inside a folder take up, subfolders included. |
 | `transfer_files` | Moves files and folders (with their contents) from one linked account to another (`from_account`, `to_account`; with two accounts the receiver defaults to the other one). Big jobs run in steps of about 40 seconds and hand back a `continue_token`; Claude keeps calling until `done` is true. Safe to repeat, and reversible by transferring back. |
 
+Every tool result starts with a `message`: one plain sentence Claude can pass on as it is, such as "Moved 41 files and 2 folders (6.2 GB) from you@gmail.com to archive@gmail.com. Skipped 3 that belong to someone else." or, mid-job, "Still moving: 120 files so far (3.4 GB). Carrying on…". After a move it also says roughly where the sending account's storage should land once Google catches up.
+
 Moved items remember where they came from: each one gets private Drive `appProperties` (`offloadedFrom`, `offloadedAt`) that only this OAuth client can see, and `find_files` shows them as `moved_here_from` and `moved_on`. Where a file is now is always read live from Drive, so it can't go stale.
 
 There's no database. The connector is its own OAuth server for Claude (discovery, dynamic client registration, PKCE), and everything it has to remember, the two Google sign-ins included, is sealed with AES-256-GCM under `MCP_TOKEN_SECRET` and held by Claude as its token.
