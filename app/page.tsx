@@ -2,7 +2,7 @@ import { Header, Footer } from "@/components/Chrome";
 import { HeroDemo } from "@/components/HeroDemo";
 import { GmailDemo } from "@/components/GmailDemo";
 import { CopyUrl } from "@/components/CopyUrl";
-import { ClaudeMark, WorksWith } from "@/components/BrandMarks";
+import { ClaudeMark, OpenAIMark, WorksWith } from "@/components/BrandMarks";
 import { APP_URL, FAQS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const jsonLd = {
@@ -198,7 +198,15 @@ export default function Home() {
           <section id="claude" className="block claude-block" aria-labelledby="claude-title">
             <div>
               <p className="kicker">New: Offload in your AI chat</p>
-              <h2 id="claude-title">Or just <mark>ask your AI</mark></h2>
+              <div className="ai-head">
+                <h2 id="claude-title">
+                  Or just <mark>ask your AI</mark>
+                </h2>
+                <span className="ai-logos" aria-hidden="true">
+                  <OpenAIMark size={38} />
+                  <ClaudeMark size={38} />
+                </span>
+              </div>
               <p className="lede">
                 Add Offload to Claude, ChatGPT or any AI app that supports MCP connectors, and manage all your Google accounts from
                 the chat, up to five. Ask how much space each one has, where a file is, or to move a folder across. It finds it,
@@ -217,11 +225,7 @@ export default function Home() {
                       <ClaudeMark size={15} /> <b>Claude:</b> Settings &rarr; Connectors &rarr; Add custom connector
                     </li>
                     <li>
-                      <b>ChatGPT:</b> turn on Developer mode in Settings, then add a new connector (on plans with custom connectors)
-                    </li>
-                    <li>
-                      <b>Gemini CLI:</b> add it under <code>mcpServers</code> as <code>httpUrl</code> in settings.json, then run{" "}
-                      <code>/mcp auth offload</code>
+                      <OpenAIMark size={15} /> <b>ChatGPT:</b> turn on Developer mode in Settings, then add a new connector (on plans with custom connectors)
                     </li>
                   </ul>
                 </li>

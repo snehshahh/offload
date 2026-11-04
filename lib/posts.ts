@@ -61,7 +61,7 @@ export const POSTS: Post[] = [
     date: "2026-11-04",
     keywords: ["move Google Drive files with Claude", "Claude Google Drive connector", "ChatGPT Google Drive connector", "Google Drive MCP connector", "Offload for Claude", "transfer Google Drive ownership with AI", "Claude MCP Google Drive"],
     body: [
-      { p: "Offload now works inside AI chat apps that support MCP connectors, such as Claude and ChatGPT, and in Gemini CLI. Add it as a connector, link your Google accounts once (two, or up to five), and you can free up storage by asking in plain words instead of ticking boxes. Claude finds the files, tells you what it’s about to move and how much it frees, and moves them when you say so." },
+      { p: "Offload now works inside AI chat apps that support MCP connectors, such as Claude and ChatGPT. Add it as a connector, link your Google accounts once (two, or up to five), and you can free up storage by asking in plain words instead of ticking boxes. Claude finds the files, tells you what it’s about to move and how much it frees, and moves them when you say so." },
       { p: "The big difference from doing it by hand: the receiving account accepts each transfer automatically. Nobody has to sign in to the other account and click **Accept**." },
       { h2: "What you can ask" },
       { ul: [
@@ -77,7 +77,7 @@ export const POSTS: Post[] = [
       { h2: "Set it up" },
       { ol: [
         `Copy Offload’s connector address: \`${SITE_URL}/mcp\`.`,
-        "Add it as a custom connector. **Claude:** open **Settings**, then **Connectors**, and choose **Add custom connector**. **ChatGPT:** turn on **Developer mode** in Settings, then add a new connector with the address. **Gemini CLI:** add it to `mcpServers` in `~/.gemini/settings.json` as `\"offload\": { \"httpUrl\": \"<the address>\" }`, then run `/mcp auth offload`.",
+        "Add it as a custom connector. **Claude:** open **Settings**, then **Connectors**, and choose **Add custom connector**. **ChatGPT:** turn on **Developer mode** in Settings, then add a new connector with the address.",
         "Select **Connect**. Sign in first with the account that’s running out of space, then with your other account. Have more Google accounts with free space? Choose **Add another account** to link up to five in all, then **Finish**.",
         "Back in the chat, start a new conversation and ask away.",
       ] },

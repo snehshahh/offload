@@ -40,7 +40,7 @@ export function Footer() {
       </div>
       <p>
         Offload is free and independent. It isn&rsquo;t affiliated with, endorsed by or sponsored by Google, Anthropic or OpenAI.
-        Google Drive, Gmail, Google Photos and Gemini are trademarks of Google LLC. Claude is a trademark of Anthropic. ChatGPT is a
+        Google Drive, Gmail and Google Photos are trademarks of Google LLC. Claude is a trademark of Anthropic. ChatGPT is a
         trademark of OpenAI.
       </p>
     </footer>

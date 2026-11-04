@@ -1,8 +1,14 @@
 /**
  * Marks of the AI apps Offload works with, shown only to say "works with" (nominative use).
  * Claude's logo comes from Simple Icons (simpleicons.org, CC0); Claude is a trademark of Anthropic.
- * OpenAI's logo isn't in Simple Icons and OpenAI restricts its use, so ChatGPT is shown by name only.
+ * The OpenAI logo (public/brands/openai.png) was supplied by the site owner; ChatGPT is a trademark of OpenAI.
  */
+
+export function OpenAIMark({ size = 20 }: { size?: number }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/brands/openai.png" width={size} height={size} alt="OpenAI logo" className="bm-openai" />;
+}
+
 export function ClaudeMark({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" role="img" aria-label="Claude logo" className="bm-claude">
@@ -19,7 +25,10 @@ export function WorksWith() {
         <ClaudeMark />
         Claude
       </span>
-      <span className="works-chip works-chip-name">ChatGPT</span>
+      <span className="works-chip">
+        <OpenAIMark />
+        ChatGPT
+      </span>
       <span className="works-more">and other apps that support MCP</span>
     </div>
   );

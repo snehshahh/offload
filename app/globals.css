@@ -252,3 +252,8 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
 .works-chip-name { padding-left:14px; }
 .works-more { font-size:14px; color:var(--muted); }
 .capps .bm-claude { vertical-align:-2px; }
+.ai-head { display:flex; align-items:center; gap:14px 18px; flex-wrap:wrap; margin-bottom:16px; }
+.ai-head h2 { margin:0; }
+.ai-logos { display:inline-flex; align-items:center; gap:10px; }
+.ai-logos svg, .ai-logos img { display:block; }
+.capps .bm-openai { vertical-align:-2px; display:inline-block; }
