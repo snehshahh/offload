@@ -67,16 +67,16 @@ It uses the `https://mail.google.com/` scope, which Google classes as restricted
 
 The landing site also serves an MCP server at `/mcp`. Added to Claude as a custom connector, it lets someone ask, in the chat, things like "what's taking up space in my Drive?" or "move every video over 500 MB to my other account", and Claude does the transfer.
 
-When the connector is added, the person signs in with both Google accounts, first the one to free up and then the one that receives. Because the connector holds both, each transfer is requested by the sender and accepted by the receiver in the same step, so nobody has to open the other account. Moved items keep their folder structure, and loose ones land in "Transferred from &lt;sender&gt;", just as in the web app.
+When the connector is added, the person signs in with 2 to 5 Google accounts, first their main account (the one to free up) and then the ones that receive files. Because the connector holds them all, each transfer is requested by the sender and accepted by the receiver in the same step, so nobody has to open the other account. To change the set of accounts, remove the connector in Claude and add it again. Moved items keep their folder structure, and loose ones land in "Transferred from &lt;sender&gt;", just as in the web app.
 
 Tools:
 
 | Tool | What it does |
 | --- | --- |
-| `get_accounts` | Both linked accounts and their storage use. |
-| `find_files` | Finds files or folders and says which account each is in. Without an account it searches both, so "where's my wedding video?" just works. Biggest first, by type (images, videos, documents, folders), minimum size, name, or inside a folder. `moved_only` lists what Offload moved into an account. |
+| `get_accounts` | Every linked account's storage: used, total, free, % used, status (ok / almost full / full) and what's using it, plus totals and which account has the most room. |
+| `find_files` | Finds files or folders and says which account each is in. Without an account it searches all of them, so "where's my wedding video?" just works. Biggest first, by type (images, videos, documents, folders), minimum size, name, or inside a folder. `moved_only` lists what Offload moved into an account. |
 | `folder_size` | Space the files an account owns inside a folder take up, subfolders included. |
-| `transfer_files` | Moves files and folders (with their contents) to the other account. Big jobs run in steps of about 40 seconds and hand back a `continue_token`; Claude keeps calling until `done` is true. Safe to repeat, and reversible by transferring back. |
+| `transfer_files` | Moves files and folders (with their contents) from one linked account to another (`from_account`, `to_account`; with two accounts the receiver defaults to the other one). Big jobs run in steps of about 40 seconds and hand back a `continue_token`; Claude keeps calling until `done` is true. Safe to repeat, and reversible by transferring back. |
 
 Moved items remember where they came from: each one gets private Drive `appProperties` (`offloadedFrom`, `offloadedAt`) that only this OAuth client can see, and `find_files` shows them as `moved_here_from` and `moved_on`. Where a file is now is always read live from Drive, so it can't go stale.
 

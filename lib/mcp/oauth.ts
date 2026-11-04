@@ -4,9 +4,11 @@ import type { Account } from "./google";
 /**
  * The connector is its own OAuth 2.1 authorization server, as the MCP spec asks: Claude registers
  * (dynamic client registration), sends the person here to sign in, and gets tokens back. Signing in means
- * linking two Google accounts, one after the other. Nothing is stored: every value below is sealed (see seal.ts).
+ * linking 2 to 5 Google accounts, one after the other; the first is the person's main account. Nothing is stored: every value below is sealed (see seal.ts).
  */
 
+/** Most Google accounts one connection can link (the first is the main account). */
+export const MAX_ACCOUNTS = 5;
 export const ACCESS_TTL = 60 * 60; // 1 hour
 export const CODE_TTL = 5 * 60;
 export const FLOW_TTL = 30 * 60;
@@ -15,11 +17,19 @@ export const FLOW_TTL = 30 * 60;
 export type Client = { r: string[]; n?: string };
 /** The client request being served while the person signs in. */
 export type Pending = { cid: string; r: string; s?: string; cc: string };
-/** Sealed as "flow": Google's state parameter. Holds the first account once it's linked. */
-export type Flow = { p: Pending; a?: Account };
-/** Sealed as "code", "access" and "refresh". */
-export type Grant = { cid: string; a: Account; b: Account };
+/** Sealed as "flow": Google's state parameter. Holds the accounts linked so far, main first. */
+export type Flow = { p: Pending; accts: Account[] };
+/**
+ * Sealed as "code", "access" and "refresh". `accts` are the linked accounts, main first.
+ * Connections made before more than two accounts were supported carry `a` and `b` instead.
+ */
+export type Grant = { cid: string; accts?: Account[]; a?: Account; b?: Account };
 export type CodeGrant = Grant & { r: string; cc: string };
+
+export function linkedAccounts(g: Grant): Account[] {
+  if (g.accts?.length) return g.accts;
+  return [g.a, g.b].filter((x): x is Account => !!x);
+}
 
 export function origin(req: Request): string {
   const env = process.env.MCP_PUBLIC_URL;
@@ -87,7 +97,10 @@ const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 /** A small page for the sign-in steps. `body` is trusted HTML; use esc() for anything else. */
-export function page(o: { step?: string; title: string; body: string; button?: { href: string; label: string } }) {
+type Button = { href: string; label: string; alt?: boolean };
+
+export function page(o: { step?: string; title: string; body: string; button?: Button; buttons?: Button[] }) {
+  const buttons = o.buttons || (o.button ? [o.button] : []);
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -112,6 +125,12 @@ export function page(o: { step?: string; title: string; body: string; button?: {
   a.btn { display:block; text-align:center; margin-top:20px; padding:12px 16px; border-radius:10px; background:var(--accent); color:var(--accent-text);
           text-decoration:none; font-weight:600; }
   a.btn:focus-visible { outline:3px solid var(--text); outline-offset:2px; }
+  a.btn.alt { background:transparent; color:var(--accent); border:1.5px solid var(--accent); margin-top:10px; }
+  a.btn + a.btn { margin-top:10px; }
+  ul.accts { list-style:none; margin:4px 0 12px; padding:0; border:1px solid var(--line); border-radius:12px; }
+  ul.accts li { padding:10px 14px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  ul.accts li + li { border-top:1px solid var(--line); }
+  ul.accts .tag { color:var(--muted); font-size:13px; }
   .fine { font-size:13px; margin-top:16px; }
 </style>
 </head>
@@ -121,7 +140,7 @@ export function page(o: { step?: string; title: string; body: string; button?: {
   ${o.step ? `<p class="step">${esc(o.step)}</p>` : ""}
   <h1>${esc(o.title)}</h1>
   ${o.body}
-  ${o.button ? `<a class="btn" href="${esc(o.button.href)}">${esc(o.button.label)}</a>` : ""}
+  ${buttons.map((b) => `<a class="btn${b.alt ? " alt" : ""}" href="${esc(b.href)}">${esc(b.label)}</a>`).join("\n  ")}
 </main>
 </body>
 </html>`;

@@ -1,5 +1,5 @@
 import { googleAuthUrl } from "@/lib/mcp/google";
-import { backToClient, esc, FLOW_TTL, googleRedirect, page } from "@/lib/mcp/oauth";
+import { backToClient, esc, FLOW_TTL, googleRedirect, page, MAX_ACCOUNTS } from "@/lib/mcp/oauth";
 import type { Client, Flow, Pending } from "@/lib/mcp/oauth";
 import { open, seal } from "@/lib/mcp/seal";
 
@@ -23,14 +23,15 @@ export function GET(req: Request) {
     return backToClient(pending, { error: "invalid_request", error_description: "PKCE with S256 is required." });
   }
 
-  const state = seal("flow", { p: pending } satisfies Flow, FLOW_TTL);
+  const state = seal("flow", { p: pending, accts: [] } satisfies Flow, FLOW_TTL);
   const app = client.n ? esc(client.n) : "Claude";
   return page({
-    step: "Step 1 of 2",
+    step: "Step 1",
     title: "Sign in with the account that's running out of space",
     body:
-      `<p>${app} will be able to move Google Drive files between your two Google accounts, by handing over ownership.</p>` +
-      "<p>First, choose the account you want to <strong>free up</strong>. Next you'll choose the account that <strong>receives</strong> the files.</p>" +
+      `<p>${app} will be able to move Google Drive files between your Google accounts, by handing over ownership.</p>` +
+      "<p>First, choose the account you want to <strong>free up</strong>: your main account. Next you'll add the accounts that " +
+      `<strong>receive</strong> files, from one up to ${MAX_ACCOUNTS - 1} more.</p>` +
       '<p class="fine">Google may say the app isn\'t verified. Choose Advanced, then Go to Offload. Nothing is stored on Offload\'s servers: ' +
       "your sign-in is sealed into the connection Claude keeps, and you can remove it any time at myaccount.google.com/permissions.</p>",
     button: { href: googleAuthUrl(googleRedirect(req), state), label: "Choose the account to free up" },

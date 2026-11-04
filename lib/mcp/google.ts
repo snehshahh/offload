@@ -18,7 +18,7 @@ export class ReconnectError extends Error {
   constructor(email: string) {
     super(
       `Google signed ${email} out of Offload (access was revoked or expired). ` +
-        "Reconnect the Offload connector in Claude's settings (Settings → Connectors) and sign in with both accounts again."
+        "Reconnect the Offload connector in Claude's settings (Settings → Connectors) and sign in with your accounts again."
     );
   }
 }

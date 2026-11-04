@@ -57,7 +57,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Can I use Offload from Claude?",
-    a: "Yes. Add Offload as a custom connector in Claude's settings and sign in with both of your Google accounts. Then ask Claude in plain words: what's using your storage, where a file is, or to move a folder to your other account. Claude checks with you before moving anything, and the other account accepts automatically, so there's nothing to do on that side.",
+    a: "Yes. Add Offload as a custom connector in Claude's settings and sign in with your Google accounts: two, or up to five. Then ask Claude in plain words: how much space each account has, where a file is, or to move a folder to another account. Claude checks with you before moving anything, and the receiving account accepts automatically, so there's nothing to do on that side.",
   },
   {
     q: "Does it work with work or school accounts?",

@@ -199,9 +199,9 @@ export default function Home() {
               <p className="kicker">New: Offload for Claude</p>
               <h2 id="claude-title">Or just ask Claude</h2>
               <p className="lede">
-                Add Offload to Claude and manage both accounts from the chat. Ask what&rsquo;s taking up space, where a file is,
-                or to move a folder across. Claude finds it, checks with you, and moves it. Nobody has to open the other account
-                to accept.
+                Add Offload to Claude and manage all your Google accounts from the chat, up to five. Ask how much space each one
+                has, where a file is, or to move a folder across. Claude finds it, checks with you, and moves it. Nobody has to
+                open the other account to accept.
               </p>
               <ol className="csteps">
                 <li>
@@ -209,8 +209,8 @@ export default function Home() {
                   <CopyUrl url={`${SITE_URL}/mcp`} />
                 </li>
                 <li>
-                  Select <b>Connect</b> and sign in twice: first the account that&rsquo;s full, then the one that receives the
-                  files.
+                  Select <b>Connect</b> and sign in with each account: first the one that&rsquo;s full, then the ones that
+                  receive files. Two is enough; you can link up to five.
                 </li>
                 <li>Ask away. Claude shows you what it&rsquo;ll move and how much it frees before anything changes.</li>
               </ol>
@@ -218,10 +218,11 @@ export default function Home() {
             <div className="chat" aria-label="Example conversation with Claude">
               <p className="msg you">What&rsquo;s eating my storage? I&rsquo;m out of space on my main account.</p>
               <div className="msg claude">
-                <span className="tool">Offload &middot; find_files</span>
+                <span className="tool">Offload &middot; get_accounts, find_files</span>
                 <p>
                   <b>you@gmail.com</b> is at 14.6 of 15 GB. The biggest things are in <b>Videos/2023</b> (6.2 GB, 41 files) and
-                  three phone backups (2.8 GB). <b>you.archive@gmail.com</b> has 11 GB free. Want me to move Videos/2023 there?
+                  three phone backups (2.8 GB). Of your other accounts, <b>you.archive@gmail.com</b> has the most room, 11 GB
+                  free. Want me to move Videos/2023 there?
                 </p>
               </div>
               <p className="msg you">Yes, move the folder.</p>

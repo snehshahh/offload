@@ -1,4 +1,4 @@
-import { ACCESS_TTL, json, oauthError, pkceMatches, preflight } from "@/lib/mcp/oauth";
+import { ACCESS_TTL, json, linkedAccounts, oauthError, pkceMatches, preflight } from "@/lib/mcp/oauth";
 import type { CodeGrant, Grant } from "@/lib/mcp/oauth";
 import { open, seal } from "@/lib/mcp/seal";
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       return oauthError("invalid_grant", "redirect_uri doesn't match.");
     }
     if (!pkceMatches(params.get("code_verifier") || "", code.cc)) return oauthError("invalid_grant", "PKCE verification failed.");
-    return tokens({ cid: code.cid, a: code.a, b: code.b });
+    return tokens(code);
   }
 
   if (params.get("grant_type") === "refresh_token") {
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 }
 
 function tokens(g: Grant) {
-  const grant: Grant = { cid: g.cid, a: g.a, b: g.b };
+  const grant: Grant = { cid: g.cid, accts: linkedAccounts(g) };
   return json({
     access_token: seal("access", grant, ACCESS_TTL),
     token_type: "Bearer",

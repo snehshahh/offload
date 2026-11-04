@@ -56,15 +56,16 @@ export const POSTS: Post[] = [
     slug: "move-google-drive-files-with-claude",
     title: "Move Google Drive files to your other account by asking Claude",
     description:
-      "Add Offload to Claude, link both Google accounts, and free up storage from the chat: ask what’s using space, where a file is, or to move a folder across.",
+      "Add Offload to Claude, link your Google accounts (up to five), and free up storage from the chat: ask how much space each has, where a file is, or to move a folder across.",
     topic: "Drive",
     date: "2026-11-04",
     keywords: ["move Google Drive files with Claude", "Claude Google Drive connector", "Offload for Claude", "transfer Google Drive ownership with AI", "Claude MCP Google Drive"],
     body: [
-      { p: "Offload now works inside Claude. Add it as a connector, link your two Google accounts once, and you can free up storage by asking in plain words instead of ticking boxes. Claude finds the files, tells you what it’s about to move and how much it frees, and moves them when you say so." },
+      { p: "Offload now works inside Claude. Add it as a connector, link your Google accounts once (two, or up to five), and you can free up storage by asking in plain words instead of ticking boxes. Claude finds the files, tells you what it’s about to move and how much it frees, and moves them when you say so." },
       { p: "The big difference from doing it by hand: the receiving account accepts each transfer automatically. Nobody has to sign in to the other account and click **Accept**." },
       { h2: "What you can ask" },
       { ul: [
+        "“How much space is left in each of my accounts?”",
         "“What’s taking up space in my Drive?”",
         "“Show me every video over 500 MB in my main account.”",
         "“How big is my Camera Uploads folder?”",
@@ -77,12 +78,12 @@ export const POSTS: Post[] = [
       { ol: [
         `Copy Offload’s connector address: \`${SITE_URL}/mcp\`.`,
         "In Claude, open **Settings**, then **Connectors**, and choose **Add custom connector**. Paste the address and save.",
-        "Select **Connect**. Offload asks you to sign in twice: first with the account that’s running out of space, then with the account that receives the files.",
+        "Select **Connect**. Sign in first with the account that’s running out of space, then with your other account. Have more Google accounts with free space? Choose **Add another account** to link up to five in all, then **Finish**.",
         "Back in Claude, start a new chat and ask away.",
       ] },
       { p: "Google may warn that the app isn’t verified. [Here’s why, and what Offload can access](/blog/google-app-not-verified-offload). If you don’t see **Add custom connector**, your Claude plan may not include custom connectors." },
       { h2: "What happens when Claude moves files" },
-      { p: "Offload uses Google Drive’s own ownership transfer, the same thing as **Share → Transfer ownership** in Drive, just for many files at once. Because both accounts are linked, the account that’s full sends the request and the other account accepts it in the same step." },
+      { p: "Offload uses Google Drive’s own ownership transfer, the same thing as **Share → Transfer ownership** in Drive, just for many files at once. Because your accounts are linked, the account that’s full sends the request and the receiving account accepts it in the same step. With more than two accounts, Claude asks which one should receive the files, and can tell you which has the most room." },
       { ul: [
         "Whole folders come over with their subfolders, and the structure stays as it was.",
         "Files that arrive without their folder are gathered into **Transferred from** plus the sender’s address, in the receiving account’s My Drive.",
@@ -91,7 +92,7 @@ export const POSTS: Post[] = [
         "Big folders move in steps; Claude carries on by itself and tells you how far it has got.",
       ] },
       { h2: "It knows which account a file is in" },
-      { p: "Each file belongs to exactly one account, the one whose storage it uses. When you ask where something is, Claude searches both accounts at once and tells you which one has it. Everything Offload moves is also labelled with the account it came from and the date, so you can ask later what moved where." },
+      { p: "Each file belongs to exactly one account, the one whose storage it uses. When you ask where something is, Claude searches all your linked accounts at once and tells you which one has it. Everything Offload moves is also labelled with the account it came from and the date, so you can ask later what moved where." },
       { h2: "What it doesn’t do" },
       { ul: [
         "It only moves files the account owns. Files other people shared with you don’t use your storage anyway, and they’re left alone.",

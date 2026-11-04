@@ -1,5 +1,5 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { CORS, json, origin, preflight } from "@/lib/mcp/oauth";
+import { CORS, json, linkedAccounts, origin, preflight } from "@/lib/mcp/oauth";
 import type { Grant } from "@/lib/mcp/oauth";
 import { open } from "@/lib/mcp/seal";
 import { buildServer } from "@/lib/mcp/server";
@@ -12,14 +12,15 @@ export const maxDuration = 60;
 async function handle(req: Request) {
   const auth = req.headers.get("authorization") || "";
   const grant = open<Grant>("access", auth.startsWith("Bearer ") ? auth.slice(7).trim() : null);
-  if (!grant) {
+  const accounts = grant ? linkedAccounts(grant) : [];
+  if (accounts.length < 2) {
     const metadata = `${origin(req)}/.well-known/oauth-protected-resource/mcp`;
     return json({ error: "invalid_token", error_description: "Connect Offload to get a token." }, 401, {
       "WWW-Authenticate": `Bearer error="invalid_token", resource_metadata="${metadata}"`,
     });
   }
 
-  const server = buildServer({ a: grant.a, b: grant.b });
+  const server = buildServer(accounts);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   const res = await transport.handleRequest(req);

@@ -4,7 +4,7 @@ import { drive, DriveError, type Account } from "./google";
 /**
  * Drive work for the MCP connector, ported from apps-script/Code.gs.
  *
- * The connector holds both accounts, so a transfer is requested by the sending account and
+ * The connector holds every linked account (2 to 5), so a transfer is requested by the sending account and
  * accepted by the receiving one in the same step: files move without anyone opening the app.
  * Accepted items whose old folder the receiver can't see are filed into
  * "Transferred from <sender>" in the receiver's My Drive, exactly as the web app does.
@@ -49,7 +49,7 @@ export function human(bytes: number): string {
   const units = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
   const v = bytes / 1024 ** i;
-  return `${v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
+  return `${v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1).replace(/\.0$/, "")} ${units[i]}`;
 }
 
 function ownerOf(f: DriveFile): string {
@@ -98,15 +98,27 @@ export async function storage(acct: Account) {
   const num = (v: unknown) => (v === undefined || v === null || v === "" ? null : Number(v));
   const limit = num(q.limit);
   const usage = num(q.usage) || 0;
+  const inDrive = num(q.usageInDrive) || 0;
+  const free = limit === null ? null : Math.max(0, limit - usage);
+  const percent = limit ? Math.round((usage / limit) * 100) : null;
+  const status = limit === null ? "unlimited" : percent! >= 100 ? "full" : percent! >= 90 ? "almost full" : "ok";
   return {
     email: acct.e,
+    summary:
+      limit === null
+        ? `${acct.e}: ${human(usage)} used, unlimited plan`
+        : `${acct.e}: ${human(usage)} of ${human(limit)} used (${percent}%), ${human(free!)} free`,
+    status,
     used: human(usage),
-    limit: limit === null ? "unlimited" : human(limit),
-    free: limit === null ? null : human(Math.max(0, limit - usage)),
-    percent_used: limit ? Math.round((usage / limit) * 100) : null,
-    in_drive: human(num(q.usageInDrive) || 0),
-    in_drive_trash: human(num(q.usageInDriveTrash) || 0),
-    gmail_and_photos: human(Math.max(0, usage - (num(q.usageInDrive) || 0))),
+    total: limit === null ? "unlimited" : human(limit),
+    free: free === null ? "unlimited" : human(free),
+    percent_used: percent,
+    breakdown: {
+      drive: human(inDrive),
+      of_which_drive_trash: human(num(q.usageInDriveTrash) || 0),
+      gmail_and_photos: human(Math.max(0, usage - inDrive)),
+    },
+    bytes: { used: usage, total: limit, free },
   };
 }
 
@@ -122,8 +134,8 @@ export type FindOpts = {
   sort: "largest" | "newest" | "name";
   limit: number;
   page_token?: string;
-  /** Only items Offload moved into this account from this other account. */
-  moved_from?: string;
+  /** Only items Offload moved into this account from any of these other accounts. */
+  moved_from?: string[];
 };
 
 export async function findFiles(acct: Account, o: FindOpts) {
@@ -135,7 +147,10 @@ export async function findFiles(acct: Account, o: FindOpts) {
   if (o.kind === "media") q += " and (mimeType contains 'image/' or mimeType contains 'video/')";
   if (o.kind === "documents") q += " and mimeType contains 'application/vnd.google-apps.'";
   if (o.name_contains) q += ` and name contains '${qEsc(o.name_contains)}'`;
-  if (o.moved_from) q += ` and appProperties has { key='offloadedFrom' and value='${qEsc(o.moved_from)}' }`;
+  if (o.moved_from?.length) {
+    const any = o.moved_from.map((e) => `appProperties has { key='offloadedFrom' and value='${qEsc(e)}' }`).join(" or ");
+    q += ` and (${any})`;
+  }
   if (o.folder_id) {
     requireId(o.folder_id);
     q += ` and '${o.folder_id}' in parents`;
@@ -253,7 +268,8 @@ type Work = { id: string; root: boolean };
 
 type TransferState = {
   k: "transfer";
-  from: "a" | "b";
+  f: string; // sender email
+  t: string; // receiver email
   todo: Work[]; // items to fetch and move
   // Folders whose contents still have to be listed. loose: the receiver won't be able to see this folder,
   // so whatever comes out of it has to be filed into "Transferred from <sender>".
@@ -271,7 +287,7 @@ export type TransferResult = {
   moved_so_far: number;
   folders_moved_so_far: number;
   space_freed_so_far: string;
-  already_in_other_account: number;
+  already_in_receiving_account: number;
   skipped_owned_by_someone_else: number;
   failed: number;
   moved_this_step: string[];
@@ -280,20 +296,27 @@ export type TransferResult = {
   note: string;
 };
 
+/**
+ * Moves `ids` from `from` to `to`, or carries on the job in `cursor` (which remembers both accounts).
+ * `accounts` are all the linked accounts, used to resolve a cursor's sender and receiver.
+ */
 export async function transfer(
-  accounts: { a: Account; b: Account },
-  opts: { ids?: string[]; from: "a" | "b"; cursor?: string; budgetMs: number }
+  accounts: Account[],
+  opts: { ids?: string[]; from?: Account; to?: Account; cursor?: string; budgetMs: number }
 ): Promise<TransferResult> {
   let state: TransferState;
   if (opts.cursor) {
     state = unpackCursor<TransferState>(opts.cursor, "transfer");
   } else {
+    if (!opts.from || !opts.to) throw new Error("Say which account the files move from and which receives them.");
+    if (opts.from.e === opts.to.e) throw new Error("The sending and receiving accounts are the same. Pick two different accounts.");
     const ids = [...new Set((opts.ids || []).map((s) => s.trim()).filter(Boolean))];
     if (!ids.length) throw new Error("Give at least one file or folder ID (find them with find_files).");
     ids.forEach(requireId);
     state = {
       k: "transfer",
-      from: opts.from,
+      f: opts.from.e,
+      t: opts.to.e,
       todo: ids.map((id) => ({ id, root: true })),
       queue: [],
       cur: null,
@@ -302,8 +325,11 @@ export async function transfer(
       errors: [],
     };
   }
-  const sender = state.from === "a" ? accounts.a : accounts.b;
-  const receiver = state.from === "a" ? accounts.b : accounts.a;
+  const sender = accounts.find((x) => x.e === state.f);
+  const receiver = accounts.find((x) => x.e === state.t);
+  if (!sender || !receiver) {
+    throw new Error("That continue_token is for accounts that aren't linked any more. Start the transfer again.");
+  }
   const start = Date.now();
   const timeLeft = () => Date.now() - start < opts.budgetMs;
   const movedNow: string[] = [];
@@ -411,7 +437,7 @@ export async function transfer(
     moved_so_far: state.n.moved,
     folders_moved_so_far: state.n.folders,
     space_freed_so_far: human(state.n.bytes),
-    already_in_other_account: state.n.already,
+    already_in_receiving_account: state.n.already,
     skipped_owned_by_someone_else: state.n.notOwned,
     failed: state.n.failed,
     moved_this_step: movedNow,

@@ -73,7 +73,8 @@ export default function Privacy() {
           <h2>Offload for Claude</h2>
           <p>
             Offload also works as a connector in Claude, so you can ask Claude to move Drive files for you. When you add it, this
-            website asks you to sign in with both of your Google accounts and for access to their Google Drive. Claude can then
+            website asks you to sign in with the Google accounts you want to link (two to five) and for access to their Google
+            Drive. Claude can then
             show each account&rsquo;s storage use, list the files and folders it owns, and move the ones you agree to from one
             account to the other: the sending account requests the transfer and the receiving account accepts it straight away,
             filing loose items into a folder named after the sender. It labels each item it moves with the account it came from
@@ -81,7 +82,7 @@ export default function Privacy() {
             It doesn&rsquo;t send emails and doesn&rsquo;t delete anything.
           </p>
           <p>
-            The connector has no database either. The sign-ins for your two accounts are encrypted and handed to Claude as part of
+            The connector has no database either. The sign-ins for your linked accounts are encrypted and handed to Claude as part of
             its connection. This website opens them only while it carries out a request, and keeps nothing afterwards. File names,
             sizes and links pass through it on their way to Claude, which shows them to you in the chat; Anthropic&rsquo;s privacy
             policy covers what Claude does with your conversation. File contents are never read.
@@ -90,7 +91,7 @@ export default function Privacy() {
           <h2>Removing access</h2>
           <p>
             You can remove Offload&rsquo;s access at any time from your Google Account, under Security, then Third-party apps with
-            account access. If you connected a second account for Google Photos, or both accounts to Claude, do the same in each
+            account access. If you connected a second account for Google Photos, or several accounts to Claude, do the same in each
             account. Removing the Offload connector in Claude&rsquo;s settings also ends Claude&rsquo;s access.
           </p>
 

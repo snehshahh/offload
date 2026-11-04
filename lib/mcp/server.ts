@@ -1,20 +1,20 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { findFiles, folderSize, storage, transfer } from "./drive";
+import { findFiles, folderSize, human, storage, transfer } from "./drive";
 import type { Account } from "./google";
 
 /** How long one transfer_files call works before handing back a continue_token. */
 const TRANSFER_BUDGET_MS = 40_000;
 
-export type Linked = { a: Account; b: Account };
+const INSTRUCTIONS = `Offload moves Google Drive files between the person's own Google accounts (2 to 5 of them, linked when the connector was added) by transferring ownership, which frees storage in the account they leave. The first linked account is their main account.
 
-const INSTRUCTIONS = `Offload moves Google Drive files between the person's two Google accounts by transferring ownership, which frees storage in the account they leave. Both accounts were linked when the connector was added; get_accounts shows them.
+Storage: get_accounts returns every account's storage. Show it as a small table (account, used, total, free, % used, status) followed by one line on which account has the most room. Google can take a few hours to update these numbers after a move.
 
-To find where something is, call find_files without account: it searches both accounts and each result says which account holds it. Files Offload moved are tagged with where they came from and when (moved_here_from, moved_on); find_files with moved_only lists them.
+Finding things: call find_files without account to search every linked account at once; each result group says which account holds those files (the owner, whose storage they use). Files Offload moved are tagged with where they came from and when (moved_here_from, moved_on); find_files with moved_only lists them.
 
-Typical flow: get_accounts (storage of both) → find_files / folder_size to pick what to move → confirm with the person, listing what will move, how much space it frees, and which account it goes to → transfer_files. If transfer_files returns done: false, call it again with only continue_token until done is true, and tell the person how far it's got.
+Moving: get_accounts → find_files / folder_size to pick what to move → confirm with the person, listing what will move, how much space it frees, and which account receives it → transfer_files. With more than two accounts, ask which account should receive the files unless the person said so; get_accounts shows which has the most room. If transfer_files returns done: false, call it again with only continue_token until done is true, and tell the person how far it's got.
 
-Only files the sending account owns can be moved; files owned by anyone else are skipped. Moved items keep their folder structure; loose ones land in "Transferred from <sender>" in the receiving account's My Drive. A transfer can be undone by transferring back with from_account set to the other account. Nothing is deleted. Google can take a few hours to update storage numbers.`;
+Only files the sending account owns can be moved; files owned by anyone else are skipped. Moved items keep their folder structure; loose ones land in "Transferred from <sender>" in the receiving account's My Drive. A transfer can be undone by moving the items back. Nothing is deleted.`;
 
 function text(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -24,33 +24,51 @@ function failure(e: unknown) {
   return { isError: true, content: [{ type: "text" as const, text: e instanceof Error ? e.message : String(e) }] };
 }
 
-export function buildServer(linked: Linked): McpServer {
-  const server = new McpServer({ name: "offload", title: "Offload", version: "1.0.0" }, { instructions: INSTRUCTIONS });
+export function buildServer(accounts: Account[]): McpServer {
+  const server = new McpServer({ name: "offload", title: "Offload", version: "1.1.0" }, { instructions: INSTRUCTIONS });
+  const main = accounts[0];
+  const list = accounts.map((x) => x.e).join(", ");
 
-  const pick = (email: string | undefined): "a" | "b" => {
-    if (!email) return "a";
+  const find = (email: string): Account => {
     const e = email.trim().toLowerCase();
-    if (e === linked.a.e) return "a";
-    if (e === linked.b.e) return "b";
-    throw new Error(`${email} isn't linked. The linked accounts are ${linked.a.e} and ${linked.b.e}.`);
+    const hit = accounts.find((x) => x.e === e);
+    if (!hit) throw new Error(`${email} isn't linked. The linked accounts are ${list}.`);
+    return hit;
   };
-  const accountArg = z
-    .string()
-    .optional()
-    .describe(`Email of one of the two linked accounts. Defaults to ${linked.a.e}.`);
+  const emailArg = (what: string) => z.string().optional().describe(`${what} One of: ${list}.`);
 
   server.registerTool(
     "get_accounts",
     {
-      title: "Linked accounts and storage",
+      title: "Storage of every linked account",
       description:
-        "Shows the two linked Google accounts and how much storage each is using, so you can tell which one is full and how much the other can take.",
+        "Shows every linked Google account with its storage: used, total, free, % used, status (ok / almost full / full) and what's " +
+        "using it (Drive, Drive trash, Gmail and Photos), plus totals and which account has the most room. Use it for " +
+        "\"how much space do my accounts have?\" and before choosing where to move files.",
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async () => {
       try {
-        const [a, b] = await Promise.all([storage(linked.a), storage(linked.b)]);
-        return text({ default_sender: a, other_account: b });
+        const all = await Promise.all(accounts.map(storage));
+        const rows = all.map(({ bytes, ...row }, i) => ({ ...row, role: i === 0 ? "main" : "linked" }));
+        const limited = all.filter((s) => s.bytes.total !== null);
+        const sum = (f: (s: (typeof all)[number]) => number) => limited.reduce((n, s) => n + f(s), 0);
+        const byFree = [...limited].sort((x, y) => y.bytes.free! - x.bytes.free!);
+        const byUse = [...limited].sort((x, y) => y.percent_used! - x.percent_used!);
+        return text({
+          accounts: rows,
+          total: limited.length
+            ? {
+                used: human(sum((s) => s.bytes.used)),
+                total: human(sum((s) => s.bytes.total!)),
+                free: human(sum((s) => s.bytes.free!)),
+                ...(limited.length < all.length ? { note: "Accounts with unlimited plans aren't in the total." } : {}),
+              }
+            : null,
+          most_free_space: byFree[0] ? `${byFree[0].email} (${byFree[0].free} free)` : null,
+          fullest: byUse[0] ? `${byUse[0].email} (${byUse[0].percent_used}% used)` : null,
+          note: "Figures come from Google and can take a few hours to catch up after files move.",
+        });
       } catch (e) {
         return failure(e);
       }
@@ -60,17 +78,14 @@ export function buildServer(linked: Linked): McpServer {
   server.registerTool(
     "find_files",
     {
-      title: "Find files in both accounts",
+      title: "Find files in your accounts",
       description:
         "Finds Drive files or folders and says which linked account each one is in (the account that owns it, whose storage it uses). " +
-        "Leave account out to search both accounts at once: use that for \"where is my X?\" and for the biggest files overall. " +
+        "Leave account out to search every linked account at once: use that for \"where is my X?\" and for the biggest files overall. " +
         "Biggest first by default. Filter by kind, min_size_mb, name_contains or folder_id. moved_only lists what Offload moved " +
         "into an account, with where it came from and when (moved_here_from, moved_on). Returns IDs for transfer_files.",
       inputSchema: {
-        account: z
-          .string()
-          .optional()
-          .describe(`Search only this account (${linked.a.e} or ${linked.b.e}). Leave out to search both.`),
+        account: emailArg("Search only this account. Leave out to search all of them."),
         kind: z
           .enum(["all", "images", "videos", "media", "documents", "folders"])
           .default("all")
@@ -78,7 +93,7 @@ export function buildServer(linked: Linked): McpServer {
         min_size_mb: z.number().min(0).optional().describe("Only files at least this big, in MB."),
         name_contains: z.string().max(200).optional().describe("Matches whole words at the start of names, as Drive search does."),
         folder_id: z.string().optional().describe("Only items directly inside this folder."),
-        moved_only: z.boolean().default(false).describe("Only items Offload moved here from the other linked account."),
+        moved_only: z.boolean().default(false).describe("Only items Offload moved here from another linked account."),
         sort: z.enum(["largest", "newest", "name"]).default("largest"),
         limit: z.number().int().min(1).max(100).default(25).describe("Per account."),
         page_token: z.string().optional().describe("next_page_token from a previous result. Needs account set to that result's account."),
@@ -88,16 +103,16 @@ export function buildServer(linked: Linked): McpServer {
     async ({ account, moved_only, ...args }) => {
       try {
         if (args.page_token && !account) throw new Error("page_token belongs to one account: pass that account too.");
-        const keys: ("a" | "b")[] = account ? [pick(account)] : ["a", "b"];
+        const targets = account ? [find(account)] : accounts;
         const results = await Promise.all(
-          keys.map((k) => {
-            const other = linked[k === "a" ? "b" : "a"].e;
-            return findFiles(linked[k], { ...args, moved_from: moved_only ? other : undefined });
+          targets.map((acct) => {
+            const others = accounts.filter((x) => x.e !== acct.e).map((x) => x.e);
+            return findFiles(acct, { ...args, moved_from: moved_only ? others : undefined });
           })
         );
         if (results.length === 1) return text(results[0]);
         return text({
-          searched: [linked.a.e, linked.b.e],
+          searched: accounts.map((x) => x.e),
           note: "Each file is in exactly one account: the one that owns it. Results are per account.",
           results,
         });
@@ -115,47 +130,57 @@ export function buildServer(linked: Linked): McpServer {
         "Adds up the files an account owns inside a folder, subfolders included: the space moving that folder would free.",
       inputSchema: {
         folder_id: z.string(),
-        account: accountArg,
+        account: emailArg(`Account the folder is in. Defaults to ${main.e}.`),
         continue_token: z.string().optional().describe("From a previous call on a big folder."),
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async (args) => {
       try {
-        return text(await folderSize(linked[pick(args.account)], args.folder_id, args.continue_token));
+        const acct = args.account ? find(args.account) : main;
+        return text(await folderSize(acct, args.folder_id, args.continue_token));
       } catch (e) {
         return failure(e);
       }
     }
   );
 
+  const two = accounts.length === 2;
   server.registerTool(
     "transfer_files",
     {
-      title: "Move files to the other account",
+      title: "Move files to another account",
       description:
-        "Moves files and folders (with everything inside) from one linked account to the other by transferring ownership: " +
+        "Moves files and folders (with everything inside) from one linked account to another by transferring ownership: " +
         "the sending account requests it and the receiving account accepts it in the same step, so nothing else has to be done. " +
         "This frees the space in the sending account. Confirm with the person first. Big jobs run in steps: while done is false, " +
         "call again with only continue_token. Safe to repeat: items already moved are skipped.",
       inputSchema: {
         ids: z.array(z.string()).max(500).optional().describe("File and folder IDs from find_files. Not needed with continue_token."),
-        from_account: accountArg.describe(
-          `Account the files move out of (the one being freed). The other linked account receives them. Defaults to ${linked.a.e}.`
+        from_account: emailArg(`Account the files move out of (the one being freed). Defaults to ${main.e}.`),
+        to_account: emailArg(
+          two
+            ? "Account that receives the files. Defaults to the other linked account."
+            : "Account that receives the files. Required: ask the person if they haven't said."
         ),
-        continue_token: z.string().optional().describe("From a previous call that returned done: false."),
+        continue_token: z.string().optional().describe("From a previous call that returned done: false. Remembers both accounts."),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async (args) => {
       try {
-        const result = await transfer(linked, {
-          ids: args.ids,
-          from: pick(args.from_account),
-          cursor: args.continue_token,
-          budgetMs: TRANSFER_BUDGET_MS,
-        });
-        return text(result);
+        let from: Account | undefined;
+        let to: Account | undefined;
+        if (!args.continue_token) {
+          from = args.from_account ? find(args.from_account) : main;
+          if (args.to_account) to = find(args.to_account);
+          else if (two) to = accounts.find((x) => x.e !== from!.e);
+          else {
+            const options = accounts.filter((x) => x.e !== from!.e).map((x) => x.e).join(", ");
+            throw new Error(`Which account should receive the files? Pass to_account: one of ${options}. get_accounts shows which has the most room.`);
+          }
+        }
+        return text(await transfer(accounts, { ids: args.ids, from, to, cursor: args.continue_token, budgetMs: TRANSFER_BUDGET_MS }));
       } catch (e) {
         return failure(e);
       }
