@@ -109,11 +109,11 @@ export function page(o: { step?: string; title: string; body: string; button?: B
 <meta name="robots" content="noindex">
 <title>${esc(o.title)} · Offload</title>
 <style>
-  :root { --bg:#EEF1F4; --card:#FFFFFF; --text:#1D2A33; --muted:#6B7A86; --line:#DCE2E7; --accent:#2F6F62; --accent-text:#FFFFFF; --ok:#2F6F62; --bad:#B4413A; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#111A1F; --card:#18242B; --text:#E8EEF1; --muted:#9AA9B3; --line:#2A3943; --accent:#8FC4B6; --accent-text:#0F2722; --ok:#8FC4B6; --bad:#F0A29C; } }
+  :root { --bg:#FBF7EC; --card:#FFFFFF; --text:#1C1B17; --muted:#736F5D; --line:#E6DFCB; --accent:#FBBC04; --accent-text:#1C1B17; --ok:#6B4E00; --bad:#B4413A; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#15140F; --card:#1F1E18; --text:#F2EEE2; --muted:#A9A390; --line:#36332A; --accent:#FBBC04; --accent-text:#1C1B17; --ok:#F7CB4D; --bad:#F0A29C; } }
   * { box-sizing: border-box; }
   body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px 16px; background:var(--bg); color:var(--text);
-         font:16px/1.55 "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+         font:16px/1.55 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   main { width:100%; max-width:440px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:28px; }
   .brand { display:flex; align-items:center; gap:10px; font-weight:650; margin-bottom:20px; }
   .brand img { width:28px; height:28px; border-radius:7px; }
@@ -125,7 +125,7 @@ export function page(o: { step?: string; title: string; body: string; button?: B
   a.btn { display:block; text-align:center; margin-top:20px; padding:12px 16px; border-radius:10px; background:var(--accent); color:var(--accent-text);
           text-decoration:none; font-weight:600; }
   a.btn:focus-visible { outline:3px solid var(--text); outline-offset:2px; }
-  a.btn.alt { background:transparent; color:var(--accent); border:1.5px solid var(--accent); margin-top:10px; }
+  a.btn.alt { background:transparent; color:var(--text); border:1.5px solid var(--text); margin-top:10px; }
   a.btn + a.btn { margin-top:10px; }
   ul.accts { list-style:none; margin:4px 0 12px; padding:0; border:1px solid var(--line); border-radius:12px; }
   ul.accts li { padding:10px 14px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }

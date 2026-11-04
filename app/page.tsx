@@ -113,7 +113,7 @@ export default function Home() {
                 <span aria-hidden="true">&rarr;</span>
               </a>
               <p className="kicker">Free Google Drive storage manager</p>
-              <h1 id="hero-title">Move Google Drive files to your other account</h1>
+              <h1 id="hero-title">Move Google Drive files to your <mark>other account</mark></h1>
               <p className="lede">
                 Google storage full? Offload bulk moves your folders, large files and photos to another Google account you
                 own, and clears out Gmail in bulk, so you can manage your free storage across both. The space frees up as soon
@@ -197,7 +197,7 @@ export default function Home() {
           <section id="claude" className="block claude-block" aria-labelledby="claude-title">
             <div>
               <p className="kicker">New: Offload for Claude</p>
-              <h2 id="claude-title">Or just ask Claude</h2>
+              <h2 id="claude-title">Or just <mark>ask Claude</mark></h2>
               <p className="lede">
                 Add Offload to Claude and manage all your Google accounts from the chat, up to five. Ask how much space each one
                 has, where a file is, or to move a folder across. Claude finds it, checks with you, and moves it. Nobody has to
