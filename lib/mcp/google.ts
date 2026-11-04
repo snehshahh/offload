@@ -1,4 +1,4 @@
-/** Google sign-in for the Claude connector (server side): OAuth code exchange and refresh-token access. */
+/** Google sign-in for the AI connector (server side): OAuth code exchange and refresh-token access. */
 import { setTokenSource, type Account } from "@/lib/drive/api";
 
 export type { Account };
@@ -18,7 +18,7 @@ export class ReconnectError extends Error {
   constructor(email: string) {
     super(
       `Google signed ${email} out of Offload (access was revoked or expired). ` +
-        "Reconnect the Offload connector in Claude's settings (Settings → Connectors) and sign in with your accounts again."
+        "Reconnect Offload in your AI app's connector settings (in Claude or ChatGPT: Settings, then Connectors) and sign in with your accounts again."
     );
   }
 }

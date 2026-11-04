@@ -2,7 +2,7 @@ import { drive, DriveError, type Account } from "./api";
 
 /**
  * Offload's Drive engine. It runs in the browser for the web app (/app) and on
- * the server for the Claude connector, and touches nothing but the Drive API.
+ * the server for the AI connector, and touches nothing but the Drive API.
  *
  * Every linked account (2 to 5) is signed in, so a transfer is requested by the sending account and accepted by
  * the receiving one in the same step: files move without anyone opening the other account.
@@ -556,7 +556,7 @@ export async function transfer(
   }
 }
 
-/** The sentence Claude can pass on as is: what moved, what didn't, and what happens next. */
+/** The sentence the assistant (or the app) can pass on as is: what moved, what didn't, and what happens next. */
 function transferMessage(state: TransferState, from: string, to: string, done: boolean): string {
   const n = state.n;
   const what = listing([

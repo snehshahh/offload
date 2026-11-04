@@ -238,3 +238,10 @@ details p { margin:0 0 20px; color:var(--ink-2); max-width:70ch; animation:faq-i
   .band { padding:36px 24px; }
   .block { padding:56px 0; }
 }
+.capps { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:6px; }
+.capps li { padding-left:0 !important; font-size:15px; }
+.capps li::before { content:none !important; }
+.csteps code { font:0.88em/1.4 var(--mono); background:var(--slate-soft); color:var(--ink); padding:1px 5px; border-radius:5px; overflow-wrap:anywhere; }
+.capps li { counter-increment:none; }
+.csteps li { min-width:0; }
+.copyurl { max-width:min(460px, 100%); box-sizing:border-box; }

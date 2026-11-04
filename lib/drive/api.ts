@@ -1,5 +1,5 @@
 /**
- * The Google API caller (Drive and Gmail) shared by the Offload web app (in the browser) and the Claude connector
+ * The Google API caller (Drive and Gmail) shared by the Offload web app (in the browser) and the AI connector
  * (on the server).
  * It only needs a way to get an access token for an account: the server refreshes one with Google, the browser
  * gets one from Google Identity Services. Whichever side runs registers its source with setTokenSource().

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Account } from "./google";
 
 /**
- * The connector is its own OAuth 2.1 authorization server, as the MCP spec asks: Claude registers
+ * The connector is its own OAuth 2.1 authorization server, as the MCP spec asks: the AI app (Claude, ChatGPT…) registers
  * (dynamic client registration), sends the person here to sign in, and gets tokens back. Signing in means
  * linking 2 to 5 Google accounts, one after the other; the first is the person's main account. Nothing is stored: every value below is sealed (see seal.ts).
  */
@@ -136,7 +136,7 @@ export function page(o: { step?: string; title: string; body: string; button?: B
 </head>
 <body>
 <main>
-  <div class="brand"><img src="/icon.svg" alt="">Offload for Claude</div>
+  <div class="brand"><img src="/icon.svg" alt="">Offload</div>
   ${o.step ? `<p class="step">${esc(o.step)}</p>` : ""}
   <h1>${esc(o.title)}</h1>
   ${o.body}

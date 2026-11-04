@@ -1,6 +1,6 @@
 import { json, origin, preflight } from "@/lib/mcp/oauth";
 
-/** RFC 9728: tells Claude that /mcp is protected and where to sign in. Served at the root and at /mcp. */
+/** RFC 9728: tells MCP clients that /mcp is protected and where to sign in. Served at the root and at /mcp. */
 export function GET(req: Request) {
   const base = origin(req);
   return json(

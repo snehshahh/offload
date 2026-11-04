@@ -1,6 +1,6 @@
 import { deflateRawSync, inflateRawSync } from "node:zlib";
 
-/** Opaque continuation tokens for the Claude connector: compressed JSON. They hold only Drive IDs and counters. */
+/** Opaque continuation tokens for the AI connector: compressed JSON. They hold only Drive IDs and counters. */
 export function packCursor(state: object): string {
   return deflateRawSync(Buffer.from(JSON.stringify(state))).toString("base64url");
 }

@@ -9,7 +9,7 @@ export function GET(req: Request) {
   const clientId = q.get("client_id") || "";
   const client = open<Client>("client", clientId);
   if (!client) {
-    return page({ title: "This link isn't valid", body: "<p>Start again from Claude: remove the Offload connector and add it again.</p>" });
+    return page({ title: "This link isn't valid", body: "<p>Start again from your AI app: remove the Offload connector and add it again.</p>" });
   }
   const redirect = q.get("redirect_uri") || (client.r.length === 1 ? client.r[0] : "");
   if (!client.r.includes(redirect)) {
@@ -24,7 +24,7 @@ export function GET(req: Request) {
   }
 
   const state = seal("flow", { p: pending, accts: [] } satisfies Flow, FLOW_TTL);
-  const app = client.n ? esc(client.n) : "Claude";
+  const app = client.n ? esc(client.n) : "Your AI app";
   return page({
     step: "Step 1",
     title: "Sign in with the account that's running out of space",
@@ -33,7 +33,7 @@ export function GET(req: Request) {
       "<p>First, choose the account you want to <strong>free up</strong>: your main account. Next you'll add the accounts that " +
       `<strong>receive</strong> files, from one up to ${MAX_ACCOUNTS - 1} more.</p>` +
       '<p class="fine">Google may say the app isn\'t verified. Choose Advanced, then Go to Offload. Nothing is stored on Offload\'s servers: ' +
-      "your sign-in is sealed into the connection Claude keeps, and you can remove it any time at myaccount.google.com/permissions.</p>",
+      `your sign-in is sealed into the connection ${app} keeps, and you can remove it any time at myaccount.google.com/permissions.</p>`,
     button: { href: googleAuthUrl(googleRedirect(req), state), label: "Choose the account to free up" },
   });
 }

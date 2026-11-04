@@ -4,7 +4,7 @@ import type { Grant } from "@/lib/mcp/oauth";
 import { open } from "@/lib/mcp/seal";
 import { buildServer } from "@/lib/mcp/server";
 
-/** Offload's MCP endpoint (Streamable HTTP, stateless). Add https://<site>/mcp as a custom connector in Claude. */
+/** Offload's MCP endpoint (Streamable HTTP, stateless). Add https://<site>/mcp as a custom connector in Claude, ChatGPT or any MCP client. */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

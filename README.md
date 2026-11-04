@@ -10,7 +10,7 @@ Pick whole folders, your largest files, or photos and videos, and hand them over
 | --- | --- |
 | `app/`, `components/`, `lib/` | The site (Next.js), deployed on Vercel. Landing page, blog (posts live in `lib/posts.ts`), privacy page, SEO metadata, sitemap, robots and manifest. |
 | `app/app`, `components/app`, `lib/drive/`, `lib/gmail/`, `lib/photos/`, `app/api/photos/` | The Offload web app at `/app`: Drive, Gmail cleanup and Google Photos, running in the browser, plus the photo relay. `lib/drive/engine.ts` is shared with the connector. |
-| `app/mcp`, `app/oauth`, `app/.well-known`, `lib/mcp/` | Offload for Claude: an MCP connector, so people can move files by asking Claude. Runs on the same Vercel deployment. |
+| `app/mcp`, `app/oauth`, `app/.well-known`, `lib/mcp/` | The MCP connector, so people can move files by asking Claude, ChatGPT or any app that supports remote MCP connectors. Runs on the same Vercel deployment. |
 | `brand/` | Logo, profile picture and banners for LinkedIn, X and link previews. |
 | `public/google0aa1b7412de3fcf6.html` | Google Search Console ownership verification. Keep it, or the site loses verification. |
 
@@ -27,7 +27,7 @@ Environment variables:
 | Variable | Purpose |
 | --- | --- |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | The Google OAuth client the web app and the Claude connector sign in with (the secret is only used by the connector). |
-| `MCP_TOKEN_SECRET` | Seals the Claude connector's tokens. See Offload for Claude below. |
+| `MCP_TOKEN_SECRET` | Seals the connector's tokens. See Offload in AI apps below. |
 | `NEXT_PUBLIC_SITE_URL` | Optional. The site's public address, for a custom domain. On Vercel, the production address is used automatically. |
 
 ## The web app: `/app`
@@ -43,9 +43,9 @@ It runs in the browser: Google Identity Services gives it a short-lived token fo
 
 Setup: it uses the same `GOOGLE_CLIENT_ID` as the connector. In Google Cloud, that client needs your site under **Authorised JavaScript origins** (e.g. `https://offload-five-mu.vercel.app`), the **Gmail API**, **Photos Picker API** and **Photos Library API** must be enabled, `https://www.googleapis.com/auth/gmail.modify`, `photospicker.mediaitems.readonly` and `photoslibrary.appendonly` must be on the consent screen's **Data Access** list, and every account that signs in must be a test user while the consent screen is in Testing.
 
-## Offload for Claude (MCP connector)
+## Offload in AI apps (MCP connector)
 
-The landing site also serves an MCP server at `/mcp`. Added to Claude as a custom connector, it lets someone ask, in the chat, things like "what's taking up space in my Drive?" or "move every video over 500 MB to my other account", and Claude does the transfer.
+The site also serves an MCP server at `/mcp`. Added as a custom connector in Claude, ChatGPT (Developer mode), Gemini CLI or any client that supports remote MCP servers with OAuth, it lets someone ask, in the chat, things like "what's taking up space in my Drive?" or "move every video over 500 MB to my other account", and Claude does the transfer.
 
 When the connector is added, the person signs in with 2 to 5 Google accounts, first their main account (the one to free up) and then the ones that receive files. Because the connector holds them all, each transfer is requested by the sender and accepted by the receiver in the same step, so nobody has to open the other account. To change the set of accounts, remove the connector in Claude and add it again. Moved items keep their folder structure, and loose ones land in "Transferred from &lt;sender&gt;", just as in the web app.
 
@@ -80,7 +80,12 @@ There's no database. The connector is its own OAuth server for Claude (discovery
    | `MCP_TOKEN_SECRET` | At least 32 random characters, e.g. from `openssl rand -base64 48`. Changing it signs every connection out. |
    | `MCP_PUBLIC_URL` | Optional. The site's public address, if requests reach it under another host name. |
 
-4. **Redeploy**, then in Claude go to **Settings → Connectors → Add custom connector**, enter `https://YOUR-SITE/mcp` and select **Connect**.
+4. **Redeploy**, then add `https://YOUR-SITE/mcp` as a custom connector and connect:
+   - **Claude:** Settings → Connectors → Add custom connector.
+   - **ChatGPT:** turn on Developer mode in Settings, then add a new connector.
+   - **Gemini CLI:** in `~/.gemini/settings.json`, add `"mcpServers": { "offload": { "httpUrl": "https://YOUR-SITE/mcp" } }`, then run `/mcp auth offload`.
+
+   The connector registers each app itself (dynamic client registration) and accepts any https return address, or http on localhost for command-line clients.
 
 While the consent screen's publishing status is **Testing**, Google lets only test users sign in and expires the sign-ins after 7 days. When that happens Claude says so, and the person removes and adds the connector again. Publishing the app (for the Drive scope that means Google's verification) removes both limits.
 

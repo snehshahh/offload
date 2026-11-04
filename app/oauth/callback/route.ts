@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   const q = new URL(req.url).searchParams;
   const flow = open<Flow>("flow", q.get("state"));
   if (!flow || !Array.isArray(flow.accts)) {
-    return page({ title: "This sign-in expired", body: "<p>Go back to Claude and connect Offload again.</p>" });
+    return page({ title: "This sign-in expired", body: "<p>Go back to your AI app and connect Offload again.</p>" });
   }
 
   if (q.get("error")) {

@@ -55,8 +55,8 @@ export const FAQS: { q: string; a: string }[] = [
     a: "Yes. The Gmail tab finds emails in bulk with quick filters like Promotions, bigger than 10 MB or older than a year, or by words, subject and sender. It shows how many match, then moves them to Trash once you confirm. Starred and important emails are left alone by default, and anything trashed can be restored for 30 days.",
   },
   {
-    q: "Can I use Offload from Claude?",
-    a: "Yes. Add Offload as a custom connector in Claude's settings and sign in with your Google accounts: two, or up to five. Then ask Claude in plain words: how much space each account has, where a file is, or to move a folder to another account. Claude checks with you before moving anything, and the receiving account accepts automatically, so there's nothing to do on that side.",
+    q: "Can I use Offload from Claude or ChatGPT?",
+    a: "Yes. Add Offload as a custom connector in Claude, ChatGPT or another AI app that supports MCP connectors, and sign in with your Google accounts: two, or up to five. Then ask in plain words: how much space each account has, where a file is, or to move a folder to another account. It checks with you before moving anything, and the receiving account accepts automatically, so there's nothing to do on that side.",
   },
   {
     q: "Does it work with work or school accounts?",

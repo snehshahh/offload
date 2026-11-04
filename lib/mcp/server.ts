@@ -29,7 +29,7 @@ function failure(e: unknown) {
   return { isError: true, content: [{ type: "text" as const, text: e instanceof Error ? e.message : String(e) }] };
 }
 
-/** `site` is this deployment's address (e.g. https://offload.example), so Claude can show Offload's icon and link. */
+/** `site` is this deployment's address (e.g. https://offload.example), so AI apps can show Offload's icon and link. */
 export function buildServer(accounts: Account[], site?: string): McpServer {
   const server = new McpServer(
     {

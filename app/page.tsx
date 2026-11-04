@@ -38,7 +38,7 @@ const jsonLd = {
         "Bulk delete Gmail emails by category, size, age, sender or subject",
         "Accept all incoming transfers at once",
         "See folder sizes and storage use",
-        "Move Drive files between your accounts by asking Claude",
+        "Move Drive files between your accounts by asking Claude, ChatGPT or other AI assistants",
       ],
     },
     {
@@ -109,7 +109,7 @@ export default function Home() {
             <div className="hero-copy">
               <a className="news" href="#claude">
                 <span className="news-tag">New</span>
-                Move files by asking Claude
+                Move files by asking Claude or ChatGPT
                 <span aria-hidden="true">&rarr;</span>
               </a>
               <p className="kicker">Free Google Drive storage manager</p>
@@ -196,26 +196,41 @@ export default function Home() {
 
           <section id="claude" className="block claude-block" aria-labelledby="claude-title">
             <div>
-              <p className="kicker">New: Offload for Claude</p>
-              <h2 id="claude-title">Or just <mark>ask Claude</mark></h2>
+              <p className="kicker">New: Offload in your AI chat</p>
+              <h2 id="claude-title">Or just <mark>ask your AI</mark></h2>
               <p className="lede">
-                Add Offload to Claude and manage all your Google accounts from the chat, up to five. Ask how much space each one
-                has, where a file is, or to move a folder across. Claude finds it, checks with you, and moves it. Nobody has to
-                open the other account to accept.
+                Add Offload to Claude, ChatGPT or any AI app that supports MCP connectors, and manage all your Google accounts from
+                the chat, up to five. Ask how much space each one has, where a file is, or to move a folder across. It finds it,
+                checks with you, and moves it. Nobody has to open the other account to accept.
               </p>
               <ol className="csteps">
                 <li>
-                  In Claude, open <b>Settings &rarr; Connectors &rarr; Add custom connector</b> and paste this address:
+                  Copy Offload&rsquo;s connector address:
                   <CopyUrl url={`${SITE_URL}/mcp`} />
+                </li>
+                <li>
+                  Add it as a custom connector:
+                  <ul className="capps">
+                    <li>
+                      <b>Claude:</b> Settings &rarr; Connectors &rarr; Add custom connector
+                    </li>
+                    <li>
+                      <b>ChatGPT:</b> turn on Developer mode in Settings, then add a new connector (on plans with custom connectors)
+                    </li>
+                    <li>
+                      <b>Gemini CLI:</b> add it under <code>mcpServers</code> as <code>httpUrl</code> in settings.json, then run{" "}
+                      <code>/mcp auth offload</code>
+                    </li>
+                  </ul>
                 </li>
                 <li>
                   Select <b>Connect</b> and sign in with each account: first the one that&rsquo;s full, then the ones that
                   receive files. Two is enough; you can link up to five.
                 </li>
-                <li>Ask away. Claude shows you what it&rsquo;ll move and how much it frees before anything changes.</li>
+                <li>Ask away. It shows you what it&rsquo;ll move and how much it frees before anything changes.</li>
               </ol>
             </div>
-            <div className="chat" aria-label="Example conversation with Claude">
+            <div className="chat" aria-label="Example conversation with an AI assistant">
               <p className="msg you">What&rsquo;s eating my storage? I&rsquo;m out of space on my main account.</p>
               <div className="msg claude">
                 <span className="tool">Offload &middot; get_accounts, find_files</span>

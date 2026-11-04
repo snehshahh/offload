@@ -21,8 +21,8 @@ export default function Privacy() {
           <p>
             Offload is a web app at /app on this website. It runs in your browser: when you sign in, Google gives your browser tab
             short-lived access to the accounts you sign in with (up to five), with the permissions you approve on Google&rsquo;s
-            screens, and the page talks to Google directly. Offload also works as a connector in Claude: see Offload for Claude
-            below.
+            screens, and the page talks to Google directly. Offload also works as a connector in AI apps such as Claude and
+            ChatGPT: see Offload in AI apps below.
           </p>
 
           <h2>What it accesses</h2>
@@ -85,28 +85,31 @@ export default function Privacy() {
             you&rsquo;ve checked the copies.
           </p>
 
-          <h2>Offload for Claude</h2>
+          <h2>Offload in AI apps</h2>
           <p>
-            Offload also works as a connector in Claude, so you can ask Claude to move Drive files for you. When you add it, this
+            Offload also works as a connector in AI apps that support MCP, such as Claude and ChatGPT, so you can ask the
+            assistant to move Drive files for you. When you add it, this
             website asks you to sign in with the Google accounts you want to link (two to five) and for access to their Google
-            Drive. Claude can then
+            Drive. The assistant can then
             show each account&rsquo;s storage use, list the files and folders it owns, and move the ones you agree to from one
             account to the other: the sending account requests the transfer and the receiving account accepts it straight away,
             filing loose items into a folder named after the sender. It labels each item it moves with the account it came from
-            and the date, a private note on the file that only Offload can see, so Claude can later tell you what moved where.
+            and the date, a private note on the file that only Offload can see, so the assistant can later tell you what moved where.
             It doesn&rsquo;t send emails and doesn&rsquo;t delete anything.
           </p>
           <p>
-            The connector has no database either. The sign-ins for your linked accounts are encrypted and handed to Claude as part of
+            The connector has no database either. The sign-ins for your linked accounts are encrypted and handed to the AI app as part of
             its connection. This website opens them only while it carries out a request, and keeps nothing afterwards. File names,
-            sizes and links pass through it on their way to Claude, which shows them to you in the chat; Anthropic&rsquo;s privacy
-            policy covers what Claude does with your conversation. File contents are never read.
+            sizes and links pass through it on their way to the AI app, which shows them to you in the chat; that app&rsquo;s own
+            privacy policy (Anthropic&rsquo;s for Claude, OpenAI&rsquo;s for ChatGPT) covers what it does with your conversation.
+            File contents are never read.
           </p>
 
           <h2>Removing access</h2>
           <p>
             You can remove Offload&rsquo;s access at any time from your Google Account, under Security, then Third-party apps with
-            account access. Do the same in each account you signed in with, in the web app or in Claude. Removing the Offload connector in Claude&rsquo;s settings also ends Claude&rsquo;s access.
+            account access. Do the same in each account you signed in with, in the web app or in an AI app. Removing the Offload connector in the AI app&rsquo;s settings also ends that app&rsquo;s
+            access.
           </p>
 
           <h2>Use of Google user data</h2>
