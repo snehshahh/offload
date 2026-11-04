@@ -71,9 +71,10 @@ The Drive part of Offload, rebuilt as a page on this site so it no longer needs 
 - **Tabs:** Folders (browse My Drive, sizes added up in the background), Large files, Photos & videos (thumbnails), and Waiting to accept (transfers started elsewhere, such as the classic app, accepted in one click).
 - **Shared engine:** `lib/drive/engine.ts` is the same code the Claude connector uses. `lib/drive/api.ts` is the Drive caller; the browser plugs in its tokens via `lib/drive/browserAuth.ts`, the server via `lib/mcp/google.ts`.
 - **Expired sign-ins:** tokens last about an hour. If one runs out mid-job, the job pauses and a banner asks for one click on Continue (Google's window may only open on a click), then it carries on.
-- **Gmail cleanup and Google Photos** are still in the classic Apps Script app, linked from the top of the page.
+- **Gmail cleanup** (`lib/gmail/engine.ts`): the same quick filters and fields as the classic app, a live count and the newest 20 matches, a two-click confirm, and trashing in slices that never go past the confirmed number and skip conversations already handled. It asks for Gmail permission only when the tab is opened, per account, with the narrower `gmail.modify` scope (search and Trash; it can't delete for good), and reads only the subject, sender and date of the matches it shows.
+- **Google Photos** is still in the classic Apps Script app, linked from the top of the page.
 
-Setup: it uses the same `GOOGLE_CLIENT_ID` as the connector. In Google Cloud, that client needs your site under **Authorised JavaScript origins** (e.g. `https://offload-five-mu.vercel.app`), and every account that signs in must be a test user while the consent screen is in Testing.
+Setup: it uses the same `GOOGLE_CLIENT_ID` as the connector. In Google Cloud, that client needs your site under **Authorised JavaScript origins** (e.g. `https://offload-five-mu.vercel.app`), the **Gmail API** must be enabled, `https://www.googleapis.com/auth/gmail.modify` must be on the consent screen's **Data Access** list, and every account that signs in must be a test user while the consent screen is in Testing.
 
 ## Offload for Claude (MCP connector)
 

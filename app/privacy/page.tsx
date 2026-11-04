@@ -84,6 +84,14 @@ export default function Privacy() {
             the sender, and labels each moved item with the account it came from and the date (a private note only Offload can
             see). It doesn&rsquo;t delete anything and doesn&rsquo;t send emails.
           </p>
+          <p>
+            Its Gmail cleanup asks for Gmail permission separately, only when you open it, and only for the accounts you choose.
+            It uses Google&rsquo;s gmail.modify permission, which lets it search your mail and move conversations to Trash but
+            not delete anything for good. To show what a search found, it reads only the subject, sender and date of the newest
+            20 matches; it never reads what your emails say. It moves to Trash only the conversations you confirm, leaving starred
+            and important ones alone unless you say otherwise. As with Drive, all of this happens between your browser and
+            Google.
+          </p>
 
           <h2>Offload for Claude</h2>
           <p>

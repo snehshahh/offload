@@ -4,13 +4,13 @@
  * sent anywhere except Google. They last about an hour; when one runs out mid-job, Drive calls for that account wait
  * until the person clicks Continue (Google's window may only open on a click), then carry on.
  */
-import { setTokenSource, type Account } from "./api";
+import { DRIVE_SCOPE, GMAIL_SCOPE, ScopeNeededError, setTokenSource, type Account } from "./api";
 
-const SCOPE = "https://www.googleapis.com/auth/drive";
 const GIS_SRC = "https://accounts.google.com/gsi/client";
 const KEY = "offload.tokens.v1";
 
-type Tok = { e: string; token: string; until: number };
+/** s: the permissions (scopes) this token covers, space-separated. */
+type Tok = { e: string; token: string; until: number; s?: string };
 type Deferred = { promise: Promise<string>; resolve: (t: string) => void; reject: (e: Error) => void };
 
 declare global {
@@ -69,23 +69,26 @@ function loadGis(): Promise<void> {
   return gis;
 }
 
-/** Opens Google's window and resolves with a Drive access token. Must start from a click. */
-async function ask(hint: string | undefined, prompt: "" | "select_account" | "consent"): Promise<{ token: string; expiresIn: number }> {
+/** Opens Google's window and resolves with an access token covering `scopes`. Must start from a click. */
+async function ask(hint: string | undefined, prompt: "" | "select_account" | "consent", scopes: string[] = [DRIVE_SCOPE]): Promise<{ token: string; expiresIn: number; scope: string }> {
   if (!clientId) throw new Error("Offload isn't set up yet: GOOGLE_CLIENT_ID is missing.");
   await loadGis();
   return new Promise((resolve, reject) => {
     const oauth2 = window.google.accounts.oauth2;
     const client = oauth2.initTokenClient({
       client_id: clientId,
-      scope: SCOPE,
+      scope: scopes.join(" "),
+      include_granted_scopes: true,
       prompt,
       ...(hint ? { login_hint: hint } : {}),
       callback: (resp: any) => {
         if (resp.error) return reject(new Error(resp.error_description || resp.error));
-        if (!oauth2.hasGrantedAllScopes(resp, SCOPE)) {
-          return reject(new Error("Offload needs access to Google Drive. Try again and tick the Google Drive box on Google's screen."));
+        const missing = scopes.filter((sc) => !oauth2.hasGrantedAllScopes(resp, sc));
+        if (missing.length) {
+          const what = missing.includes(GMAIL_SCOPE) && !missing.includes(DRIVE_SCOPE) ? "Gmail" : "Google Drive";
+          return reject(new Error(`Offload needs access to ${what}. Try again and tick the ${what} box on Google's screen.`));
         }
-        resolve({ token: resp.access_token, expiresIn: Number(resp.expires_in) || 3600 });
+        resolve({ token: resp.access_token, expiresIn: Number(resp.expires_in) || 3600, scope: String(resp.scope || scopes.join(" ")) });
       },
       error_callback: (err: any) => {
         const type = err?.type || "";
@@ -104,28 +107,44 @@ async function ask(hint: string | undefined, prompt: "" | "select_account" | "co
   });
 }
 
-function keep(e: string, token: string, expiresIn: number) {
-  tokens.set(e, { e, token, until: Date.now() + Math.max(60, expiresIn - 60) * 1000 });
+function keep(e: string, token: string, expiresIn: number, scope: string) {
+  tokens.set(e, { e, token, until: Date.now() + Math.max(60, expiresIn - 60) * 1000, s: scope });
   save();
+}
+
+function scopesOf(e: string): string[] {
+  const granted = (tokens.get(e)?.s || DRIVE_SCOPE).split(" ");
+  return [DRIVE_SCOPE, ...(granted.includes(GMAIL_SCOPE) ? [GMAIL_SCOPE] : [])];
+}
+
+/** Whether this account has let Offload use Gmail (in this tab). */
+export function hasGmail(e: string): boolean {
+  return scopesOf(e).includes(GMAIL_SCOPE);
+}
+
+/** Asks Google to let Offload use Gmail for this account too (keeps Drive). Call from a click. */
+export async function allowGmail(e: string) {
+  const { token, expiresIn, scope } = await ask(e, "", [DRIVE_SCOPE, GMAIL_SCOPE]);
+  keep(e, token, expiresIn, scope);
 }
 
 /** Signs in one more Google account (Google shows its account chooser). Call from a click. */
 export async function signIn(): Promise<Account> {
-  const { token, expiresIn } = await ask(undefined, "select_account");
+  const { token, expiresIn, scope } = await ask(undefined, "select_account");
   const res = await fetch("https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)", {
     headers: { authorization: `Bearer ${token}` },
   });
   const body = await res.json().catch(() => ({}));
   const e = String(body?.user?.emailAddress || "").toLowerCase();
   if (!res.ok || !e) throw new Error(body?.error?.message || "Google didn't say which account that was. Try again.");
-  keep(e, token, expiresIn);
+  keep(e, token, expiresIn, scope);
   return { e, r: "" };
 }
 
 /** Gets a fresh token for an account whose calls are waiting, then lets them carry on. Call from a click. */
 export async function reauth(e: string) {
-  const { token, expiresIn } = await ask(e, "");
-  keep(e, token, expiresIn);
+  const { token, expiresIn, scope } = await ask(e, "", scopesOf(e));
+  keep(e, token, expiresIn, scope);
   const d = waiting.get(e);
   waiting.delete(e);
   d?.resolve(token);
@@ -148,7 +167,8 @@ export function signOut(e: string) {
   }
 }
 
-async function source(acct: Account, force: boolean): Promise<string> {
+async function source(acct: Account, force: boolean, scope: string): Promise<string> {
+  if (!scopesOf(acct.e).includes(scope)) throw new ScopeNeededError(acct.e, scope);
   const t = tokens.get(acct.e);
   if (t && !force && t.until > Date.now()) return t.token;
   let d = waiting.get(acct.e);

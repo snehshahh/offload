@@ -20,16 +20,30 @@ import {
   type SizeState,
   type TransferResult,
 } from "@/lib/drive/engine";
-import { initBrowserAuth, onReauthNeeded, reauth, signIn, signOut } from "@/lib/drive/browserAuth";
+import { allowGmail, hasGmail, initBrowserAuth, onReauthNeeded, reauth, signIn, signOut } from "@/lib/drive/browserAuth";
+import { ScopeNeededError } from "@/lib/drive/api";
+import {
+  GMAIL_FILTERS,
+  gmailPreview,
+  gmailQuery,
+  gmailSearchUrl,
+  gmailTrashUrl,
+  startTrash,
+  trashSlice,
+  type GmailFilter,
+  type GmailSearch,
+  type TrashState,
+} from "@/lib/gmail/engine";
 import { Mark } from "@/components/Logo";
 
 const MAX_ACCOUNTS = 5;
 type Store = Awaited<ReturnType<typeof storage>>;
-type Tab = "folders" | "large" | "media" | "waiting";
+type Tab = "folders" | "large" | "media" | "waiting" | "gmail";
 type Sel = { id: string; name: string; folder: boolean; bytes: number | null };
 type Job =
   | { kind: "transfer"; from: string; to: string; result: TransferResult | null; running: boolean; error: string }
-  | { kind: "accept"; to: string; result: AcceptResult | null; running: boolean; error: string };
+  | { kind: "accept"; to: string; result: AcceptResult | null; running: boolean; error: string }
+  | { kind: "gmail"; email: string; result: TrashState | null; running: boolean; error: string };
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const date = (iso: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
@@ -176,6 +190,23 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
     }
   };
 
+  const runTrash = async (acct: Account, search: GmailSearch, limit: number) => {
+    const base = { kind: "gmail" as const, email: acct.e };
+    setJob({ ...base, result: null, running: true, error: "" });
+    try {
+      let st = await trashSlice(acct, startTrash(search, limit));
+      setJob({ ...base, result: st, running: !st.done, error: "" });
+      while (!st.done) {
+        st = await trashSlice(acct, st);
+        setJob({ ...base, result: st, running: !st.done, error: "" });
+      }
+      loadStorage([acct]);
+      setReload((n) => n + 1);
+    } catch (e) {
+      setJob((j) => (j ? { ...j, running: false, error: errText(e) } : j));
+    }
+  };
+
   if (!ready) return <div className="oa" />;
 
   return (
@@ -187,7 +218,7 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
           <span className="oa-beta">Beta</span>
         </a>
         <a className="oa-classic" href={classicUrl}>
-          Gmail &amp; Google Photos: classic app <span aria-hidden="true">&rarr;</span>
+          Google Photos: classic app <span aria-hidden="true">&rarr;</span>
         </a>
       </header>
 
@@ -253,7 +284,7 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
             )}
           </section>
 
-          {accounts.length > 1 && (
+          {accounts.length > 1 && tab !== "gmail" && (
             <section className="oa-route" aria-label="Where files go">
               <label>
                 <span>Move from</span>
@@ -307,6 +338,7 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
                 ["large", "Large files"],
                 ["media", "Photos & videos"],
                 ["waiting", "Waiting to accept"],
+                ["gmail", "Gmail cleanup"],
               ] as [Tab, string][]
             ).map(([k, label]) => (
               <button key={k} role="tab" aria-selected={tab === k} className="oa-tab" onClick={() => setTab(k)}>
@@ -320,9 +352,10 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
             {from && tab === "large" && <FilesTab key={from.e + reload} acct={from} sel={sel} toggle={toggle} mode="large" />}
             {from && tab === "media" && <FilesTab key={from.e + reload} acct={from} sel={sel} toggle={toggle} mode="media" />}
             {tab === "waiting" && <WaitingTab key={reload} accounts={accounts} onAccept={runAccept} />}
+            {tab === "gmail" && <GmailTab accounts={accounts} initial={fromE} stor={stor} reloadKey={reload} onTrash={runTrash} />}
           </section>
 
-          {picked.length > 0 && tab !== "waiting" && (
+          {picked.length > 0 && tab !== "waiting" && tab !== "gmail" && (
             <div className="oa-bar" role="region" aria-label="Selection">
               <p>
                 <b>{pickedWhat}</b> selected
@@ -380,7 +413,17 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
 
       {job && (
         <Modal
-          title={job.running ? (job.kind === "transfer" ? "Moving…" : "Accepting…") : job.error ? "Something went wrong" : "Done"}
+          title={
+            job.running
+              ? job.kind === "transfer"
+                ? "Moving…"
+                : job.kind === "gmail"
+                  ? "Moving to Trash…"
+                  : "Accepting…"
+              : job.error
+                ? "Something went wrong"
+                : "Done"
+          }
           onClose={job.running ? undefined : () => setJob(null)}
         >
           {job.running && <div className="oa-strip" aria-hidden="true" />}
@@ -391,7 +434,7 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
           {job.kind === "transfer" && job.result && job.result.moved_this_step.length > 0 && job.running && (
             <p className="oa-fine">Just moved: {job.result.moved_this_step.slice(0, 5).join(", ")}</p>
           )}
-          {job.result && job.result.errors.length > 0 && (
+          {job.result && "errors" in job.result && job.result.errors.length > 0 && (
             <details className="oa-errors">
               <summary>{count(job.result.errors.length, "problem")}</summary>
               <ul>
@@ -410,6 +453,11 @@ export default function OffloadApp({ clientId, classicUrl }: { clientId: string;
               <button className="btn btn-main" onClick={() => setJob(null)}>
                 Close
               </button>
+              {job.kind === "gmail" && job.result && job.result.trashed > 0 && (
+                <a className="btn btn-quiet" href={gmailTrashUrl(job.email)} target="_blank" rel="noreferrer">
+                  Open Gmail&rsquo;s Trash
+                </a>
+              )}
             </div>
           )}
         </Modal>
@@ -746,6 +794,207 @@ function WaitingTab({ accounts, onAccept }: { accounts: Account[]; onAccept: (a:
 
 /* --------------------------------------------------------------------- */
 
+type Preview = Awaited<ReturnType<typeof gmailPreview>>;
+
+function GmailTab({
+  accounts,
+  initial,
+  stor,
+  reloadKey,
+  onTrash,
+}: {
+  accounts: Account[];
+  initial: string;
+  stor: Record<string, Store | { error: string } | "loading">;
+  reloadKey: number;
+  onTrash: (a: Account, s: GmailSearch, limit: number) => void;
+}) {
+  const [email, setEmail] = useState(initial || accounts[0].e);
+  const acct = accounts.find((a) => a.e === email) || accounts[0];
+  const [allowed, setAllowed] = useState(() => hasGmail(acct.e));
+  const [filters, setFilters] = useState<GmailFilter[]>(["promotions"]);
+  const [words, setWords] = useState("");
+  const [subject, setSubject] = useState("");
+  const [from, setFrom] = useState("");
+  const [keepStarred, setKeepStarred] = useState(true);
+  const [res, setRes] = useState<Preview | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const seq = useRef(0);
+
+  useEffect(() => setAllowed(hasGmail(acct.e)), [acct.e]);
+  const search = useMemo<GmailSearch>(() => ({ filters, words, subject, from, keepStarred }), [filters, words, subject, from, keepStarred]);
+  let query = "";
+  try {
+    query = gmailQuery(search);
+  } catch {
+    /* nothing chosen yet */
+  }
+
+  useEffect(() => {
+    setConfirm(false);
+    if (!allowed || !query) {
+      setRes(null);
+      setLoading(false);
+      return;
+    }
+    const id = ++seq.current;
+    setLoading(true);
+    setError("");
+    const t = setTimeout(async () => {
+      try {
+        const r = await gmailPreview(acct, search);
+        if (id === seq.current) setRes(r);
+      } catch (e) {
+        if (id !== seq.current) return;
+        if (e instanceof ScopeNeededError) setAllowed(false);
+        else setError(errText(e));
+      } finally {
+        if (id === seq.current) setLoading(false);
+      }
+    }, 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, acct.e, allowed, reloadKey]);
+
+  const st = stor[acct.e];
+  const ok = st && st !== "loading" && !("error" in st) ? st : null;
+  const n = res ? (res.capped ? `all ${res.count.toLocaleString("en-US")}+` : res.count.toLocaleString("en-US")) : "";
+  const toggleFilter = (k: GmailFilter) => setFilters((f) => (f.includes(k) ? f.filter((x) => x !== k) : [...f, k]));
+
+  return (
+    <div className="oa-gm">
+      {accounts.length > 1 && (
+        <label className="oa-gm-acct">
+          <span>Clean up</span>
+          <select value={acct.e} onChange={(e) => setEmail(e.target.value)}>
+            {accounts.map((a) => (
+              <option key={a.e}>{a.e}</option>
+            ))}
+          </select>
+          {ok && <em>Gmail and Photos use {ok.breakdown.gmail_and_photos} here</em>}
+        </label>
+      )}
+
+      {!allowed ? (
+        <div className="oa-gm-allow">
+          <h3>Let Offload tidy Gmail for {acct.e}</h3>
+          <p>
+            Old promotions, newsletters and big attachments use the same storage as your Drive. Offload can search your mail,
+            show the subject and sender of the newest matches, and move the conversations you confirm to Trash. It can&rsquo;t
+            delete anything for good, and it never reads what your emails say.
+          </p>
+          <button
+            className="btn btn-main"
+            onClick={() =>
+              allowGmail(acct.e)
+                .then(() => setAllowed(true))
+                .catch((e) => setError(errText(e)))
+            }
+          >
+            Allow Gmail access
+          </button>
+          {error && <p className="oa-note bad">{error}</p>}
+        </div>
+      ) : (
+        <>
+          <div className="gchips oa-gm-chips" role="group" aria-label="Quick filters">
+            {(Object.keys(GMAIL_FILTERS) as GmailFilter[]).map((k) => (
+              <button key={k} className="gchip" aria-pressed={filters.includes(k)} onClick={() => toggleFilter(k)}>
+                {GMAIL_FILTERS[k].label}
+              </button>
+            ))}
+          </div>
+          <div className="oa-gm-fields">
+            <label>
+              <span>Has the words</span>
+              <input type="text" value={words} onChange={(e) => setWords(e.target.value)} placeholder="unsubscribe" />
+            </label>
+            <label>
+              <span>Subject contains</span>
+              <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Your order" />
+            </label>
+            <label>
+              <span>From</span>
+              <input type="text" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="news@shop.com" />
+            </label>
+          </div>
+          <label className="oa-gm-keep">
+            <input type="checkbox" className="ck" checked={keepStarred} onChange={(e) => setKeepStarred(e.target.checked)} />
+            Leave starred and important emails alone
+          </label>
+
+          <div className="oa-gm-result" aria-live="polite">
+            {!query ? (
+              <p className="oa-empty">Pick a quick filter or type something to search for.</p>
+            ) : loading && !res ? (
+              <p className="oa-loading">Searching {acct.e}…</p>
+            ) : error ? (
+              <p className="oa-note bad">{error}</p>
+            ) : res ? (
+              <>
+                <p className="oa-gm-count">
+                  <b>{res.capped ? `${res.count.toLocaleString("en-US")}+` : res.count.toLocaleString("en-US")}</b>{" "}
+                  {res.count === 1 && !res.capped ? "conversation matches" : "conversations match"}
+                  {loading && <span className="oa-gm-busy"> · updating…</span>}
+                  <a href={gmailSearchUrl(acct.e, res.query)} target="_blank" rel="noreferrer">
+                    See them in Gmail
+                  </a>
+                </p>
+                {res.items.length > 0 && (
+                  <ul className="oa-list oa-gm-list">
+                    {res.items.map((m) => (
+                      <li key={m.id}>
+                        <MailIcon />
+                        <span className="oa-gm-main">
+                          <span className="oa-gm-subj">{m.subject}</span>
+                          <span className="oa-gm-sub">
+                            {m.from}
+                            {m.messages > 1 ? ` · ${m.messages} messages` : ""}
+                          </span>
+                        </span>
+                        <span className="oa-date">{date(m.date)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {res.count > res.items.length && <p className="oa-fine">Showing the newest {res.items.length}.</p>}
+                {res.count > 0 && (
+                  <div className="oa-actions">
+                    {!confirm ? (
+                      <button className="btn btn-main" onClick={() => setConfirm(true)}>
+                        Move {n} to Trash
+                      </button>
+                    ) : (
+                      <>
+                        <button className="btn btn-danger" onClick={() => onTrash(acct, search, res.capped ? 0 : res.count)}>
+                          Yes, move {n} conversations to Trash
+                        </button>
+                        <button className="btn btn-quiet" onClick={() => setConfirm(false)}>
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {res.count > 0 && (
+                  <p className="oa-fine">
+                    Nothing is deleted for good: Gmail keeps Trash for 30 days, so you can restore anything. The space frees up
+                    once the Trash is emptied.
+                  </p>
+                )}
+              </>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------------- */
+
 function Modal({ title, onClose, children }: { title: string; onClose?: () => void; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -768,6 +1017,15 @@ function FolderIcon() {
   return (
     <svg className="oa-ic" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
       <path fill="currentColor" d="M3 6.5A2.5 2.5 0 0 1 5.5 4h3.6c.6 0 1.2.24 1.65.66L12.2 6H18.5A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-11Z" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg className="oa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m4 7 8 6 8-6" />
     </svg>
   );
 }

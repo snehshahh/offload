@@ -142,3 +142,30 @@ button.oa-name:hover, a.oa-name:hover { text-decoration:underline; text-decorati
   .oa-bar .btn { width:100%; }
   .oa-classic { font-size:13px; }
 }
+
+/* Gmail cleanup */
+.oa-gm-acct { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; font-size:15px; }
+.oa-gm-acct span { font-family:var(--mono); font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+.oa-gm-acct select { font-size:15px; padding:8px 12px; border:1px solid var(--hair); border-radius:10px; background:#fff; color:var(--ink); }
+.oa-gm-acct em { font-style:normal; font-size:13px; color:var(--muted); }
+.oa-gm-allow { max-width:60ch; padding:8px 4px; }
+.oa-gm-allow h3 { font-size:22px; margin-bottom:8px; }
+.oa-gm-allow p { color:var(--ink-2); margin:0 0 18px; }
+.oa-gm-chips { margin:0 0 14px; }
+.oa-gm-fields { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:12px; }
+.oa-gm-fields label { display:flex; flex-direction:column; gap:5px; font-size:13px; color:var(--muted); }
+.oa-gm-fields input { font-size:15px; padding:10px 12px; border:1px solid var(--hair); border-radius:10px; background:#fff; color:var(--ink); }
+.oa-gm-fields input:focus { outline:none; border-color:var(--ink); box-shadow:0 0 0 3px var(--sun-soft); }
+.oa-gm-keep { display:flex; align-items:center; gap:10px; font-size:15px; margin-bottom:18px; cursor:pointer; }
+.oa-gm-result { border-top:1px solid var(--hair); padding-top:16px; }
+.oa-gm-count { display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; margin:0 0 10px; color:var(--ink-2); }
+.oa-gm-count b { font-family:var(--display); font-weight:900; font-size:26px; color:var(--ink); letter-spacing:-0.02em; }
+.oa-gm-count a { margin-left:auto; font-size:14px; }
+.oa-gm-busy { color:var(--muted); font-size:14px; }
+.oa-gm-main { flex:1; min-width:0; display:flex; flex-direction:column; }
+.oa-gm-subj { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); }
+.oa-gm-sub { font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media (max-width:640px) {
+  .oa-gm-fields { grid-template-columns:1fr; }
+  .oa-gm-count a { margin-left:0; }
+}
