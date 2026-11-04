@@ -74,9 +74,11 @@ Tools:
 | Tool | What it does |
 | --- | --- |
 | `get_accounts` | Both linked accounts and their storage use. |
-| `find_files` | Files or folders an account owns: biggest first, by type (images, videos, documents, folders), minimum size, name, or inside a folder. |
+| `find_files` | Finds files or folders and says which account each is in. Without an account it searches both, so "where's my wedding video?" just works. Biggest first, by type (images, videos, documents, folders), minimum size, name, or inside a folder. `moved_only` lists what Offload moved into an account. |
 | `folder_size` | Space the files an account owns inside a folder take up, subfolders included. |
 | `transfer_files` | Moves files and folders (with their contents) to the other account. Big jobs run in steps of about 40 seconds and hand back a `continue_token`; Claude keeps calling until `done` is true. Safe to repeat, and reversible by transferring back. |
+
+Moved items remember where they came from: each one gets private Drive `appProperties` (`offloadedFrom`, `offloadedAt`) that only this OAuth client can see, and `find_files` shows them as `moved_here_from` and `moved_on`. Where a file is now is always read live from Drive, so it can't go stale.
 
 There's no database. The connector is its own OAuth server for Claude (discovery, dynamic client registration, PKCE), and everything it has to remember, the two Google sign-ins included, is sealed with AES-256-GCM under `MCP_TOKEN_SECRET` and held by Claude as its token.
 

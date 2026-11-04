@@ -8,13 +8,16 @@ import { drive, DriveError, type Account } from "./google";
  * accepted by the receiving one in the same step: files move without anyone opening the app.
  * Accepted items whose old folder the receiver can't see are filed into
  * "Transferred from <sender>" in the receiver's My Drive, exactly as the web app does.
+ *
+ * Every moved item is tagged with private appProperties (offloadedFrom, offloadedAt) so the connector
+ * remembers, on the file itself, which account it came from and when. Only this OAuth client can see them.
  */
 
 export const FOLDER_MIME = "application/vnd.google-apps.folder";
 const FILE_FIELDS =
   "id,name,mimeType,ownedByMe,parents,quotaBytesUsed,size,owners(emailAddress),permissions(id,emailAddress,role,pendingOwner)";
 const LIST_FIELDS =
-  "nextPageToken,files(id,name,mimeType,size,quotaBytesUsed,modifiedTime,webViewLink,owners(emailAddress),permissions(emailAddress,pendingOwner))";
+  "nextPageToken,files(id,name,mimeType,size,quotaBytesUsed,modifiedTime,webViewLink,appProperties,owners(emailAddress),permissions(emailAddress,pendingOwner))";
 const ID_RE = /^[A-Za-z0-9_-]{5,}$/;
 const CONCURRENCY = 5;
 
@@ -28,6 +31,7 @@ export type DriveFile = {
   quotaBytesUsed?: string;
   modifiedTime?: string;
   webViewLink?: string;
+  appProperties?: Record<string, string>;
   owners?: { emailAddress?: string }[];
   permissions?: { id?: string; emailAddress?: string; role?: string; pendingOwner?: boolean }[];
 };
@@ -118,6 +122,8 @@ export type FindOpts = {
   sort: "largest" | "newest" | "name";
   limit: number;
   page_token?: string;
+  /** Only items Offload moved into this account from this other account. */
+  moved_from?: string;
 };
 
 export async function findFiles(acct: Account, o: FindOpts) {
@@ -129,6 +135,7 @@ export async function findFiles(acct: Account, o: FindOpts) {
   if (o.kind === "media") q += " and (mimeType contains 'image/' or mimeType contains 'video/')";
   if (o.kind === "documents") q += " and mimeType contains 'application/vnd.google-apps.'";
   if (o.name_contains) q += ` and name contains '${qEsc(o.name_contains)}'`;
+  if (o.moved_from) q += ` and appProperties has { key='offloadedFrom' and value='${qEsc(o.moved_from)}' }`;
   if (o.folder_id) {
     requireId(o.folder_id);
     q += ` and '${o.folder_id}' in parents`;
@@ -185,6 +192,9 @@ function slim(f: DriveFile) {
     modified: f.modifiedTime || "",
     link: f.webViewLink || "",
     ...(pending ? { pending_transfer_to: pending.emailAddress || "" } : {}),
+    ...(f.appProperties?.offloadedFrom
+      ? { moved_here_from: f.appProperties.offloadedFrom, moved_on: f.appProperties.offloadedAt || "" }
+      : {}),
   };
 }
 
@@ -325,7 +335,12 @@ export async function transfer(
         if (isFolder) loose = !(await canSee(receiver, f.id));
       } else {
         await handOver(sender, receiver, f);
-        if (root) await fileForReceiver(receiver, f, inbox);
+        try {
+          await settle(receiver, f, root, inbox, sender.e);
+        } catch (e) {
+          // Ownership has moved, so it counts as moved; just say what's off.
+          if (state.errors.length < 25) state.errors.push({ id: f.id, name: f.name, detail: `Moved, but couldn't tag or file it: ${errMsg(e)}` });
+        }
         if (isFolder) state.n.folders++;
         else {
           state.n.moved++;
@@ -431,18 +446,24 @@ async function handOver(sender: Account, receiver: Account, f: DriveFile) {
 }
 
 /**
- * If the item's old folder is visible to the receiver (a folder that came over too), leave it there.
- * Otherwise file it into "Transferred from <sender>", creating that folder only if it doesn't exist.
+ * After the receiver accepts: tag the item with where it came from, and for picked items whose old folder the
+ * receiver can't see, file it into "Transferred from <sender>" (created only if it doesn't exist). One PATCH does both.
+ * Items inside a folder that came over too stay where they are, keeping the structure.
  */
-async function fileForReceiver(receiver: Account, f: DriveFile, inbox: () => Promise<string>) {
+async function settle(receiver: Account, f: DriveFile, root: boolean, inbox: () => Promise<string>, from: string) {
+  const tag = { appProperties: { offloadedFrom: from, offloadedAt: new Date().toISOString() } };
   const parents = f.parents || [];
-  if (parents.length && (await canSee(receiver, parents[0]))) return; // its folder is visible: keep the structure
+  const fileIt = root && !(parents.length && (await canSee(receiver, parents[0])));
+  if (!fileIt) {
+    await drive(receiver, "PATCH", `files/${f.id}`, { fields: "id" }, tag);
+    return;
+  }
   const folderId = await inbox();
   try {
-    await drive(receiver, "PATCH", `files/${f.id}`, { addParents: folderId, removeParents: parents.join(",") || undefined, fields: "id" }, {});
+    await drive(receiver, "PATCH", `files/${f.id}`, { addParents: folderId, removeParents: parents.join(",") || undefined, fields: "id" }, tag);
   } catch {
     // Some old parents can't be removed by the receiver; adding the new one is enough to make it findable.
-    await drive(receiver, "PATCH", `files/${f.id}`, { addParents: folderId, fields: "id" }, {});
+    await drive(receiver, "PATCH", `files/${f.id}`, { addParents: folderId, fields: "id" }, tag);
   }
 }
 

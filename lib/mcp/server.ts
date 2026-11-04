@@ -10,6 +10,8 @@ export type Linked = { a: Account; b: Account };
 
 const INSTRUCTIONS = `Offload moves Google Drive files between the person's two Google accounts by transferring ownership, which frees storage in the account they leave. Both accounts were linked when the connector was added; get_accounts shows them.
 
+To find where something is, call find_files without account: it searches both accounts and each result says which account holds it. Files Offload moved are tagged with where they came from and when (moved_here_from, moved_on); find_files with moved_only lists them.
+
 Typical flow: get_accounts (storage of both) → find_files / folder_size to pick what to move → confirm with the person, listing what will move, how much space it frees, and which account it goes to → transfer_files. If transfer_files returns done: false, call it again with only continue_token until done is true, and tell the person how far it's got.
 
 Only files the sending account owns can be moved; files owned by anyone else are skipped. Moved items keep their folder structure; loose ones land in "Transferred from <sender>" in the receiving account's My Drive. A transfer can be undone by transferring back with from_account set to the other account. Nothing is deleted. Google can take a few hours to update storage numbers.`;
@@ -58,29 +60,47 @@ export function buildServer(linked: Linked): McpServer {
   server.registerTool(
     "find_files",
     {
-      title: "Find files to move",
+      title: "Find files in both accounts",
       description:
-        "Lists Drive files or folders owned by one of the linked accounts, biggest first by default. Use it to find what's taking up space " +
-        "(e.g. kind=videos, or min_size_mb=100), to look inside a folder (folder_id), or to search by name. Returns IDs for transfer_files.",
+        "Finds Drive files or folders and says which linked account each one is in (the account that owns it, whose storage it uses). " +
+        "Leave account out to search both accounts at once: use that for \"where is my X?\" and for the biggest files overall. " +
+        "Biggest first by default. Filter by kind, min_size_mb, name_contains or folder_id. moved_only lists what Offload moved " +
+        "into an account, with where it came from and when (moved_here_from, moved_on). Returns IDs for transfer_files.",
       inputSchema: {
-        account: accountArg,
+        account: z
+          .string()
+          .optional()
+          .describe(`Search only this account (${linked.a.e} or ${linked.b.e}). Leave out to search both.`),
         kind: z
           .enum(["all", "images", "videos", "media", "documents", "folders"])
           .default("all")
           .describe("media = images and videos. documents = Google Docs, Sheets, Slides and other Google files."),
         min_size_mb: z.number().min(0).optional().describe("Only files at least this big, in MB."),
-        name_contains: z.string().max(200).optional(),
+        name_contains: z.string().max(200).optional().describe("Matches whole words at the start of names, as Drive search does."),
         folder_id: z.string().optional().describe("Only items directly inside this folder."),
+        moved_only: z.boolean().default(false).describe("Only items Offload moved here from the other linked account."),
         sort: z.enum(["largest", "newest", "name"]).default("largest"),
-        limit: z.number().int().min(1).max(100).default(25),
-        page_token: z.string().optional().describe("next_page_token from a previous call, for more results."),
+        limit: z.number().int().min(1).max(100).default(25).describe("Per account."),
+        page_token: z.string().optional().describe("next_page_token from a previous result. Needs account set to that result's account."),
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async (args) => {
+    async ({ account, moved_only, ...args }) => {
       try {
-        const acct = linked[pick(args.account)];
-        return text(await findFiles(acct, args));
+        if (args.page_token && !account) throw new Error("page_token belongs to one account: pass that account too.");
+        const keys: ("a" | "b")[] = account ? [pick(account)] : ["a", "b"];
+        const results = await Promise.all(
+          keys.map((k) => {
+            const other = linked[k === "a" ? "b" : "a"].e;
+            return findFiles(linked[k], { ...args, moved_from: moved_only ? other : undefined });
+          })
+        );
+        if (results.length === 1) return text(results[0]);
+        return text({
+          searched: [linked.a.e, linked.b.e],
+          note: "Each file is in exactly one account: the one that owns it. Results are per account.",
+          results,
+        });
       } catch (e) {
         return failure(e);
       }

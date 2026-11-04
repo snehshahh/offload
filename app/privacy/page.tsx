@@ -76,8 +76,9 @@ export default function Privacy() {
             website asks you to sign in with both of your Google accounts and for access to their Google Drive. Claude can then
             show each account&rsquo;s storage use, list the files and folders it owns, and move the ones you agree to from one
             account to the other: the sending account requests the transfer and the receiving account accepts it straight away,
-            filing loose items into a folder named after the sender. It doesn&rsquo;t send emails and doesn&rsquo;t delete
-            anything.
+            filing loose items into a folder named after the sender. It labels each item it moves with the account it came from
+            and the date, a private note on the file that only Offload can see, so Claude can later tell you what moved where.
+            It doesn&rsquo;t send emails and doesn&rsquo;t delete anything.
           </p>
           <p>
             The connector has no database either. The sign-ins for your two accounts are encrypted and handed to Claude as part of
