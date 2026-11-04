@@ -10,6 +10,7 @@ Pick whole folders, your largest files, or photos and videos, and hand them over
 | --- | --- |
 | `app/`, `components/`, `lib/` | The landing site (Next.js), deployed on Vercel. Landing page, blog (posts live in `lib/posts.ts`), privacy page, SEO metadata, sitemap, robots and manifest. |
 | `apps-script/` | The app itself: `Code.gs`, `Index.html` and `appsscript.json` for a Google Apps Script project. |
+| `app/mcp`, `app/oauth`, `app/.well-known`, `lib/mcp/` | Offload for Claude: an MCP connector, so people can move files by asking Claude. Runs on the same Vercel deployment. |
 | `brand/` | Logo, profile picture and banners for LinkedIn, X and link previews. |
 | `public/google0aa1b7412de3fcf6.html` | Google Search Console ownership verification. Keep it, or the site loses verification. |
 
@@ -61,6 +62,45 @@ How it copies: each photo is downloaded and uploaded in 32 MB pieces, in short c
 The Gmail tab is the former Trash Wizard add-on, rebuilt inside the app. Quick filters (Promotions, Social, Updates, bigger than 10 MB, has attachments, older than a year) and the "Has the words", "Subject contains" and "From" fields build one Gmail search. The tab counts the matches as you type and shows the newest 20. After a two-click confirm it moves them to Trash in batches. Starred and important emails are left alone unless the user unticks that option, and it never trashes more than the number the user confirmed. Nothing is deleted for good: Gmail empties its Trash after 30 days, and the done message links to the Trash for emptying it sooner.
 
 It uses the `https://mail.google.com/` scope, which Google classes as restricted. An unverified app can be used by up to 100 accounts; going past that means Google's restricted-scope verification, including a security assessment.
+
+## Offload for Claude (MCP connector)
+
+The landing site also serves an MCP server at `/mcp`. Added to Claude as a custom connector, it lets someone ask, in the chat, things like "what's taking up space in my Drive?" or "move every video over 500 MB to my other account", and Claude does the transfer.
+
+When the connector is added, the person signs in with both Google accounts, first the one to free up and then the one that receives. Because the connector holds both, each transfer is requested by the sender and accepted by the receiver in the same step, so nobody has to open the other account. Moved items keep their folder structure, and loose ones land in "Transferred from &lt;sender&gt;", just as in the web app.
+
+Tools:
+
+| Tool | What it does |
+| --- | --- |
+| `get_accounts` | Both linked accounts and their storage use. |
+| `find_files` | Files or folders an account owns: biggest first, by type (images, videos, documents, folders), minimum size, name, or inside a folder. |
+| `folder_size` | Space the files an account owns inside a folder take up, subfolders included. |
+| `transfer_files` | Moves files and folders (with their contents) to the other account. Big jobs run in steps of about 40 seconds and hand back a `continue_token`; Claude keeps calling until `done` is true. Safe to repeat, and reversible by transferring back. |
+
+There's no database. The connector is its own OAuth server for Claude (discovery, dynamic client registration, PKCE), and everything it has to remember, the two Google sign-ins included, is sealed with AES-256-GCM under `MCP_TOKEN_SECRET` and held by Claude as its token.
+
+### Setup
+
+1. **Google Cloud.** Use the standard Google Cloud project from the Google Photos setup (or any standard project). Enable the **Google Drive API** there. On the consent screen, make sure the `openid`, `email` and `https://www.googleapis.com/auth/drive` scopes are listed, and while it's in testing, add each Google account that will connect as a test user.
+2. **OAuth client.** Under **Clients**, create a **Web application** client (or add to an existing one) with this authorised redirect URI:
+
+   ```
+   https://YOUR-SITE/oauth/callback
+   ```
+3. **Vercel environment variables:**
+
+   | Variable | Value |
+   | --- | --- |
+   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | That client's ID and secret. |
+   | `MCP_TOKEN_SECRET` | At least 32 random characters, e.g. from `openssl rand -base64 48`. Changing it signs every connection out. |
+   | `MCP_PUBLIC_URL` | Optional. The site's public address, if requests reach it under another host name. |
+
+4. **Redeploy**, then in Claude go to **Settings → Connectors → Add custom connector**, enter `https://YOUR-SITE/mcp` and select **Connect**.
+
+While the consent screen's publishing status is **Testing**, Google lets only test users sign in and expires the sign-ins after 7 days. When that happens Claude says so, and the person removes and adds the connector again. Publishing the app (for the Drive scope that means Google's verification) removes both limits.
+
+To try it locally: `npm run build && npm start` with the three variables set, add `http://localhost:3000/oauth/callback` to the OAuth client, and point an MCP client such as the MCP Inspector at `http://localhost:3000/mcp`.
 
 ## Limits
 

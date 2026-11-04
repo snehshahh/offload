@@ -15,13 +15,13 @@ export default function Privacy() {
         <Header />
         <main className="prose">
           <h1>Privacy</h1>
-          <p className="fine">Last updated 23 October 2026</p>
+          <p className="fine">Last updated 4 November 2026</p>
 
           <h2>What Offload is</h2>
           <p>
             Offload is a Google Apps Script web app. When you open it, it runs under your own Google account with the permissions
-            you grant on Google&rsquo;s consent screen. This website only explains the app and links to it; it doesn&rsquo;t ask for
-            any Google access itself.
+            you grant on Google&rsquo;s consent screen. This website explains the app and links to it. It asks for Google access
+            only if you add Offload to Claude: see Offload for Claude below.
           </p>
 
           <h2>What it accesses</h2>
@@ -70,10 +70,27 @@ export default function Privacy() {
             emptying the Trash.
           </p>
 
+          <h2>Offload for Claude</h2>
+          <p>
+            Offload also works as a connector in Claude, so you can ask Claude to move Drive files for you. When you add it, this
+            website asks you to sign in with both of your Google accounts and for access to their Google Drive. Claude can then
+            show each account&rsquo;s storage use, list the files and folders it owns, and move the ones you agree to from one
+            account to the other: the sending account requests the transfer and the receiving account accepts it straight away,
+            filing loose items into a folder named after the sender. It doesn&rsquo;t send emails and doesn&rsquo;t delete
+            anything.
+          </p>
+          <p>
+            The connector has no database either. The sign-ins for your two accounts are encrypted and handed to Claude as part of
+            its connection. This website opens them only while it carries out a request, and keeps nothing afterwards. File names,
+            sizes and links pass through it on their way to Claude, which shows them to you in the chat; Anthropic&rsquo;s privacy
+            policy covers what Claude does with your conversation. File contents are never read.
+          </p>
+
           <h2>Removing access</h2>
           <p>
             You can remove Offload&rsquo;s access at any time from your Google Account, under Security, then Third-party apps with
-            account access. If you connected a second account for Google Photos, do the same there.
+            account access. If you connected a second account for Google Photos, or both accounts to Claude, do the same in each
+            account. Removing the Offload connector in Claude&rsquo;s settings also ends Claude&rsquo;s access.
           </p>
 
           <h2>Use of Google user data</h2>
