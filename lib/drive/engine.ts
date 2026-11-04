@@ -9,8 +9,10 @@ import { drive, DriveError, type Account } from "./api";
  * Accepted items whose old folder the receiver can't see are filed into
  * "Transferred from <sender>" in the receiver's My Drive, exactly as the web app does.
  *
- * Every moved item is tagged with private appProperties (offloadedFrom, offloadedAt) so the connector
- * remembers, on the file itself, which account it came from and when. Only this OAuth client can see them.
+ * Every item the person picked (a folder, or a file on its own) is tagged with private appProperties
+ * (offloadedFrom, offloadedAt), so Offload remembers on the item itself which account it came from and when.
+ * Files inside a moved folder aren't tagged one by one: that would double the receiving account's work per file,
+ * and their folder carries the label. Only this OAuth client can see the tags.
  */
 
 export const FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -20,6 +22,8 @@ const LIST_FIELDS =
   "nextPageToken,files(id,name,mimeType,size,quotaBytesUsed,modifiedTime,webViewLink,thumbnailLink,appProperties,owners(emailAddress),permissions(emailAddress,pendingOwner))";
 const ID_RE = /^(root|[A-Za-z0-9_-]{5,})$/;
 const CONCURRENCY = 5;
+/** Items handed over at the same time in a transfer. Google slows an account down if it changes much faster. */
+const TRANSFER_PARALLEL = 8;
 
 export type DriveFile = {
   id: string;
@@ -346,7 +350,15 @@ export type TransferResult = {
  */
 export async function transfer(
   accounts: Account[],
-  opts: { ids?: string[]; from?: Account; to?: Account; state?: TransferState; budgetMs: number }
+  opts: {
+    ids?: string[];
+    from?: Account;
+    to?: Account;
+    state?: TransferState;
+    budgetMs: number;
+    /** Called with a progress snapshot as items move (at most a few times a second). */
+    onProgress?: (r: TransferResult) => void;
+  }
 ): Promise<TransferResult> {
   let state: TransferState;
   if (opts.state) {
@@ -384,6 +396,7 @@ export async function transfer(
   const start = Date.now();
   const timeLeft = () => Date.now() - start < opts.budgetMs;
   const movedNow: string[] = [];
+  let lastReport = 0;
 
   let inboxPromise: Promise<string> | null = state.inbox ? Promise.resolve(state.inbox) : null;
   const inbox = () => {
@@ -413,7 +426,8 @@ export async function transfer(
       } else {
         await handOver(sender, receiver, f);
         try {
-          await settle(receiver, f, root, inbox, sender.e);
+          // Only picked items (and loose ones) need filing and a label; files inside a moved folder stay put.
+          if (root) await settle(receiver, f, root, inbox, sender.e);
         } catch (e) {
           // Ownership has moved, so it counts as moved; just say what's off.
           if (state.errors.length < 25) state.errors.push({ id: f.id, name: f.name, detail: `Moved, but couldn't tag or file it: ${errMsg(e)}` });
@@ -423,7 +437,12 @@ export async function transfer(
           state.n.moved++;
           state.n.bytes += sizeOf(f);
         }
-        if (movedNow.length < 15) movedNow.push(isFolder ? `${f.name}/` : f.name);
+        if (movedNow.length >= 15) movedNow.shift();
+        movedNow.push(isFolder ? `${f.name}/` : f.name);
+        if (opts.onProgress && Date.now() - lastReport > 300) {
+          lastReport = Date.now();
+          opts.onProgress(snapshot(false));
+        }
       }
     } catch (e) {
       fail(f, e);
@@ -433,74 +452,108 @@ export async function transfer(
     if (isFolder) state.queue.push({ id: f.id, loose });
   };
 
-  while (timeLeft()) {
-    if (state.todo.length) {
-      const batch = state.todo.splice(0, CONCURRENCY * 2);
-      await pool(batch, async (w) => {
-        let f: DriveFile;
-        try {
-          f = await drive<DriveFile>(sender, "GET", `files/${w.id}`, { fields: FILE_FIELDS });
-        } catch (e) {
-          fail({ id: w.id }, e instanceof DriveError && e.status === 404 ? new Error(`${sender.e} can't see this item.`) : e);
-          return;
-        }
-        await move(f, w.root);
-      });
-      continue;
-    }
+  // Listed folder contents waiting to be moved, with whether they need filing (see TransferState.queue).
+  const listed: { f: DriveFile; root: boolean }[] = [];
+  let listing: Promise<void> | null = null;
+  let active = 0;
+
+  /** Reads the next page of the folder being emptied (or starts the next folder). */
+  const listNext = async () => {
     if (!state.cur) {
       const folder = state.queue.shift();
-      if (!folder) break; // nothing left: done
+      if (!folder) return;
       state.cur = { ...folder, pt: null };
     }
-    let res: { files?: DriveFile[]; nextPageToken?: string };
+    const cur = state.cur;
     try {
-      res = await drive(sender, "GET", "files", {
-        q: `'${state.cur.id}' in parents and trashed = false`,
-        pageSize: 50,
-        pageToken: state.cur.pt || undefined,
+      const res: { files?: DriveFile[]; nextPageToken?: string } = await drive(sender, "GET", "files", {
+        q: `'${cur.id}' in parents and trashed = false`,
+        pageSize: 100,
+        pageToken: cur.pt || undefined,
         fields: `nextPageToken,files(${FILE_FIELDS})`,
       });
+      for (const f of res.files || []) listed.push({ f, root: cur.loose });
+      cur.pt = res.nextPageToken || null;
+      if (!cur.pt) state.cur = null;
     } catch (e) {
-      fail({ id: state.cur.id, name: `(contents of folder ${state.cur.id})` }, e);
+      fail({ id: cur.id, name: `(contents of folder ${cur.id})` }, e);
       state.cur = null;
-      continue;
     }
-    const loose = state.cur.loose;
-    state.cur.pt = res.nextPageToken || null;
-    if (!state.cur.pt) state.cur = null;
-    const children = res.files || [];
-    // Move the page in chunks; whatever doesn't fit in the time left is picked up next step by ID.
-    for (let i = 0; i < children.length; i += CONCURRENCY * 2) {
-      if (!timeLeft()) {
-        state.todo.push(...children.slice(i).map((f) => ({ id: f.id, root: loose })));
-        break;
+  };
+
+  // Workers pull from one queue: the next item starts as soon as any finishes, and one worker reads the next page
+  // of a folder while the others keep moving files.
+  const worker = async () => {
+    while (timeLeft()) {
+      const next = listed.shift();
+      if (next) {
+        active++;
+        try {
+          await move(next.f, next.root);
+        } finally {
+          active--;
+        }
+        continue;
       }
-      await pool(children.slice(i, i + CONCURRENCY * 2), (f) => move(f, loose));
+      const w = state.todo.shift();
+      if (w) {
+        active++;
+        try {
+          const f = await drive<DriveFile>(sender, "GET", `files/${w.id}`, { fields: FILE_FIELDS });
+          await move(f, w.root);
+        } catch (e) {
+          fail({ id: w.id }, e instanceof DriveError && e.status === 404 ? new Error(`${sender.e} can't see this item.`) : e);
+        } finally {
+          active--;
+        }
+        continue;
+      }
+      if (state.cur || state.queue.length) {
+        if (!listing) listing = listNext().finally(() => (listing = null));
+        await listing;
+        continue;
+      }
+      if (listing) {
+        await listing;
+        continue;
+      }
+      if (active > 0) {
+        // Someone is still moving a folder, which may queue its contents: wait a moment.
+        await new Promise((z) => setTimeout(z, 25));
+        continue;
+      }
+      return; // nothing left
     }
-  }
+  };
+  await Promise.all(Array.from({ length: TRANSFER_PARALLEL }, worker));
+  // Listed but not reached before the time ran out: picked up next step by ID.
+  state.todo.push(...listed.splice(0).map((x) => ({ id: x.f.id, root: x.root })));
 
   const done = !state.todo.length && !state.queue.length && !state.cur;
-  const result: TransferResult = {
-    message: transferMessage(state, sender.e, receiver.e, done),
+  const result = snapshot(done);
+  if (!done) result.state = state;
+  return result;
+
+  function snapshot(done: boolean): TransferResult {
+    return {
+    message: transferMessage(state, sender!.e, receiver!.e, done),
     done,
-    from: sender.e,
-    to: receiver.e,
+    from: sender!.e,
+    to: receiver!.e,
     moved_so_far: state.n.moved,
     folders_moved_so_far: state.n.folders,
     space_freed_so_far: human(state.n.bytes),
     already_in_receiving_account: state.n.already,
     skipped_owned_by_someone_else: state.n.notOwned,
     failed: state.n.failed,
-    moved_this_step: movedNow,
-    errors: state.errors,
+    moved_this_step: [...movedNow],
+    errors: [...state.errors],
     note: done
-      ? `Finished. Items whose old folder ${receiver.e} can't see are in "Transferred from ${sender.e}" in its My Drive. ` +
-        `Google can take a few hours to update storage figures. ${sender.e} keeps edit access to what it sent.`
+      ? `Finished. Items whose old folder ${receiver!.e} can't see are in "Transferred from ${sender!.e}" in its My Drive. ` +
+        `Google can take a few hours to update storage figures. ${sender!.e} keeps edit access to what it sent.`
       : "Not finished yet: call transfer_files again with only continue_token to carry on.",
-  };
-  if (!done) result.state = state;
-  return result;
+    };
+  }
 }
 
 /** The sentence Claude can pass on as is: what moved, what didn't, and what happens next. */

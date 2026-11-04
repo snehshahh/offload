@@ -15,7 +15,7 @@ Offload moves Google Drive files between the person's own Google accounts (2 to 
 
 Storage: get_accounts returns every account's storage. Show it as a small table (account, used, total, free, % used, status) followed by one line on which account has the most room. Google can take a few hours to update these numbers after a move.
 
-Finding things: call find_files without account to search every linked account at once; each result group says which account holds those files (the owner, whose storage they use). Files Offload moved are tagged with where they came from and when (moved_here_from, moved_on); find_files with moved_only lists them.
+Finding things: call find_files without account to search every linked account at once; each result group says which account holds those files (the owner, whose storage they use). The folders and files Offload moved are tagged with where they came from and when (moved_here_from, moved_on); a moved folder's contents aren't tagged one by one, they're inside the tagged folder. find_files with moved_only lists them (kind=folders for the folders).
 
 Moving: get_accounts → find_files / folder_size to pick what to move → confirm with the person, listing what will move, how much space it frees, and which account receives it → transfer_files. With more than two accounts, ask which account should receive the files unless the person said so; get_accounts shows which has the most room. If transfer_files returns done: false, call it again with only continue_token until done is true, and tell the person how far it's got.
 
@@ -99,8 +99,9 @@ export function buildServer(accounts: Account[]): McpServer {
       description:
         "Finds Drive files or folders and says which linked account each one is in (the account that owns it, whose storage it uses). " +
         "Leave account out to search every linked account at once: use that for \"where is my X?\" and for the biggest files overall. " +
-        "Biggest first by default. Filter by kind, min_size_mb, name_contains or folder_id. moved_only lists what Offload moved " +
-        "into an account, with where it came from and when (moved_here_from, moved_on). Returns IDs for transfer_files.",
+        "Biggest first by default. Filter by kind, min_size_mb, name_contains or folder_id. moved_only lists the files (or, with kind=folders, " +
+        "the folders) Offload moved "+
+        "into an account, with where they came from and when (moved_here_from, moved_on); files inside a moved folder are covered by the folder. Returns IDs for transfer_files.",
       inputSchema: {
         account: emailArg("Search only this account. Leave out to search all of them."),
         kind: z

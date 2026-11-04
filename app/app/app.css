@@ -182,3 +182,8 @@ button.oa-name:hover, a.oa-name:hover { text-decoration:underline; text-decorati
 .oa-ph-wait .oa-loading { padding-left:0; }
 .oa-ph-picked { margin-top:4px; }
 @media (max-width:640px) { .oa-ph-steps li { flex-wrap:wrap; } }
+
+/* transfer pace */
+.oa-pace { margin:4px 0 8px; }
+.oa-bar-track { height:10px; border-radius:10px; background:var(--slate-soft); overflow:hidden; margin-bottom:8px; }
+.oa-bar-track i { display:block; height:100%; background:var(--sun-deep); border-radius:10px; transition:width .4s ease; }

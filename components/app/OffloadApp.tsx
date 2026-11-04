@@ -40,9 +40,10 @@ import { Mark } from "@/components/Logo";
 const MAX_ACCOUNTS = 5;
 type Store = Awaited<ReturnType<typeof storage>>;
 type Tab = "folders" | "large" | "media" | "waiting" | "gmail" | "photos";
-type Sel = { id: string; name: string; folder: boolean; bytes: number | null };
+/** files: how many files it holds (1 for a file; a folder's count once added up), for the progress bar. */
+type Sel = { id: string; name: string; folder: boolean; bytes: number | null; files: number | null };
 type Job =
-  | { kind: "transfer"; from: string; to: string; result: TransferResult | null; running: boolean; error: string }
+  | { kind: "transfer"; from: string; to: string; result: TransferResult | null; running: boolean; error: string; started: number; expected: number | null }
   | { kind: "accept"; to: string; result: AcceptResult | null; running: boolean; error: string }
   | { kind: "gmail"; email: string; result: TrashState | null; running: boolean; error: string }
   | { kind: "photos"; from: string; to: string; result: CopyProgress | null; running: boolean; error: string };
@@ -137,12 +138,12 @@ export default function OffloadApp({ clientId }: { clientId: string }) {
       return n;
     });
   }, []);
-  const setSize = useCallback((id: string, bytes: number) => {
+  const setSize = useCallback((id: string, bytes: number, files: number) => {
     setSel((m) => {
       const s = m.get(id);
-      if (!s || s.bytes === bytes) return m;
+      if (!s || (s.bytes === bytes && s.files === files)) return m;
       const n = new Map(m);
-      n.set(id, { ...s, bytes });
+      n.set(id, { ...s, bytes, files });
       return n;
     });
   }, []);
@@ -158,15 +159,15 @@ export default function OffloadApp({ clientId }: { clientId: string }) {
   const runTransfer = async () => {
     if (!from || !to) return;
     setConfirming(false);
-    const base = { kind: "transfer" as const, from: from.e, to: to.e };
+    const expected = picked.every((s) => s.files !== null) ? picked.reduce((n, s) => n + (s.files || 0), 0) : null;
+    const base = { kind: "transfer" as const, from: from.e, to: to.e, started: Date.now(), expected };
     setJob({ ...base, result: null, running: true, error: "" });
+    const onProgress = (r: TransferResult) => setJob({ ...base, result: r, running: true, error: "" });
     try {
-      let res = await transfer(accounts, { ids: picked.map((s) => s.id), from, to, budgetMs: 4000 });
-      setJob({ ...base, result: res, running: !res.done, error: "" });
-      while (!res.done) {
-        res = await transfer(accounts, { state: res.state, budgetMs: 4000 });
-        setJob({ ...base, result: res, running: !res.done, error: "" });
-      }
+      // One long run with live progress; in the browser there's no time limit to work around.
+      let res = await transfer(accounts, { ids: picked.map((s) => s.id), from, to, budgetMs: 6 * 3600_000, onProgress });
+      while (!res.done) res = await transfer(accounts, { state: res.state, budgetMs: 6 * 3600_000, onProgress });
+      setJob({ ...base, result: res, running: false, error: "" });
       setSel(new Map());
       loadStorage([from, to]);
       setReload((n) => n + 1);
@@ -457,8 +458,9 @@ export default function OffloadApp({ clientId }: { clientId: string }) {
             {job.result?.message || (job.running ? "Getting started…" : "")}
           </p>
           {job.error && <p className="oa-note bad">{job.error}</p>}
+          {job.kind === "transfer" && job.running && <Pace job={job} />}
           {job.kind === "transfer" && job.result && job.result.moved_this_step.length > 0 && job.running && (
-            <p className="oa-fine">Just moved: {job.result.moved_this_step.slice(0, 5).join(", ")}</p>
+            <p className="oa-fine">Just moved: {job.result.moved_this_step.slice(-5).join(", ")}</p>
           )}
           {job.result && "errors" in job.result && job.result.errors.length > 0 && (
             <details className="oa-errors">
@@ -499,6 +501,40 @@ export default function OffloadApp({ clientId }: { clientId: string }) {
 
 /* --------------------------------------------------------------------- */
 
+/** Speed and time left for a running transfer, plus a progress bar when the number of files is known. */
+function Pace({ job }: { job: Extract<Job, { kind: "transfer" }> }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const moved = job.result?.moved_so_far || 0;
+  const secs = (Date.now() - job.started) / 1000;
+  const rate = secs >= 3 && moved >= 3 ? moved / secs : 0;
+  const total = job.expected && job.expected >= moved ? job.expected : null;
+  const left = rate && total ? (total - moved) / rate : null;
+  const leftText =
+    left === null ? "" : left < 60 ? "less than a minute left" : left < 5400 ? `about ${Math.round(left / 60)} min left` : `about ${(left / 3600).toFixed(1).replace(/\.0$/, "")} hours left`;
+  return (
+    <div className="oa-pace">
+      {total ? (
+        <>
+          <div className="oa-bar-track" aria-label={`${moved} of ${total} files moved`}>
+            <i style={{ width: `${Math.min(100, (moved / total) * 100)}%` }} />
+          </div>
+          <p className="oa-fine">
+            {moved.toLocaleString("en-US")} of {count(total, "file")}
+            {rate ? ` · about ${rate >= 10 ? Math.round(rate) : rate.toFixed(1)} a second` : ""}
+            {leftText ? ` · ${leftText}` : ""}
+          </p>
+        </>
+      ) : rate ? (
+        <p className="oa-fine">About {rate >= 10 ? Math.round(rate) : rate.toFixed(1)} files a second</p>
+      ) : null}
+    </div>
+  );
+}
+
 function AccountCard({ email, main, st, role, verb, onRemove }: { email: string; main: boolean; st: Store | { error: string } | "loading" | undefined; role: "from" | "to" | ""; verb: string; onRemove: () => void }) {
   const ok = st && st !== "loading" && !("error" in st) ? st : null;
   const pct = ok?.percent_used ?? 0;
@@ -538,10 +574,10 @@ function AccountCard({ email, main, st, role, verb, onRemove }: { email: string;
 
 /* --------------------------------------------------------------------- */
 
-type Sizes = Record<string, { bytes: number; done: boolean }>;
+type Sizes = Record<string, { bytes: number; files: number; done: boolean }>;
 const sizeCache = new Map<string, Sizes>(); // per account, survives tab switches
 
-function FoldersTab({ acct, sel, toggle, setSize }: { acct: Account; sel: Map<string, Sel>; toggle: (s: Sel) => void; setSize: (id: string, b: number) => void }) {
+function FoldersTab({ acct, sel, toggle, setSize }: { acct: Account; sel: Map<string, Sel>; toggle: (s: Sel) => void; setSize: (id: string, b: number, files: number) => void }) {
   const [path, setPath] = useState<{ id: string; name: string }[]>([{ id: "root", name: "My Drive" }]);
   const [folders, setFolders] = useState<FolderEntry[] | null>(null);
   const [error, setError] = useState("");
@@ -575,7 +611,7 @@ function FoldersTab({ acct, sel, toggle, setSize }: { acct: Account; sel: Map<st
             st = r.state;
             if (!live) return;
             setSizes((s) => {
-              const n = { ...s, [id]: { bytes: r.size_bytes, done: r.done } };
+              const n = { ...s, [id]: { bytes: r.size_bytes, files: r.files_you_own, done: r.done } };
               sizeCache.set(acct.e, n);
               return n;
             });
@@ -593,7 +629,7 @@ function FoldersTab({ acct, sel, toggle, setSize }: { acct: Account; sel: Map<st
   }, [folders, acct]);
 
   useEffect(() => {
-    for (const [id, s] of Object.entries(sizes)) if (s.done && sel.has(id)) setSize(id, s.bytes);
+    for (const [id, s] of Object.entries(sizes)) if (s.done && sel.has(id)) setSize(id, s.bytes, s.files);
   }, [sizes, sel, setSize]);
 
   return (
@@ -621,7 +657,7 @@ function FoldersTab({ acct, sel, toggle, setSize }: { acct: Account; sel: Map<st
                 className="ck"
                 aria-label={`Select ${f.name}`}
                 checked={on}
-                onChange={() => toggle({ id: f.id, name: f.name, folder: true, bytes: s?.done ? s.bytes : null })}
+                onChange={() => toggle({ id: f.id, name: f.name, folder: true, bytes: s?.done ? s.bytes : null, files: s?.done ? s.files : null })}
               />
               <FolderIcon />
               <button className="oa-name" onClick={() => setPath([...path, { id: f.id, name: f.name }])}>
@@ -677,7 +713,7 @@ function FilesTab({ acct, sel, toggle, mode }: { acct: Account; sel: Map<string,
 
   const allOn = items.length > 0 && items.every((i) => sel.has(i.id));
   const selectAll = () => {
-    for (const i of items) if (allOn === sel.has(i.id)) toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes });
+    for (const i of items) if (allOn === sel.has(i.id)) toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes, files: 1 });
   };
 
   return (
@@ -726,7 +762,7 @@ function FilesTab({ acct, sel, toggle, mode }: { acct: Account; sel: Map<string,
             const on = sel.has(i.id);
             return (
               <li key={i.id} className={on ? "is-on" : ""}>
-                <input type="checkbox" className="ck" aria-label={`Select ${i.name}`} checked={on} onChange={() => toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes })} />
+                <input type="checkbox" className="ck" aria-label={`Select ${i.name}`} checked={on} onChange={() => toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes, files: 1 })} />
                 <FileIcon />
                 <a className="oa-name" href={i.link} target="_blank" rel="noreferrer">
                   {i.name}
@@ -744,7 +780,7 @@ function FilesTab({ acct, sel, toggle, mode }: { acct: Account; sel: Map<string,
             return (
               <li key={i.id} className={on ? "is-on" : ""}>
                 <label>
-                  <input type="checkbox" className="ck" aria-label={`Select ${i.name}`} checked={on} onChange={() => toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes })} />
+                  <input type="checkbox" className="ck" aria-label={`Select ${i.name}`} checked={on} onChange={() => toggle({ id: i.id, name: i.name, folder: false, bytes: i.size_bytes, files: 1 })} />
                   <span className="oa-thumb">
                     {i.thumb ? <img src={i.thumb} alt="" loading="lazy" referrerPolicy="no-referrer" /> : <FileIcon />}
                     {i.type.startsWith("video/") && <span className="oa-vid">Video</span>}
