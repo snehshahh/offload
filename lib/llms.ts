@@ -31,6 +31,7 @@ const KEY_FACTS = [
   "Cleans up Gmail in bulk: filters for Promotions, Social, Updates, emails bigger than 10 MB, older than a year, or by words, subject and sender, then moves matches to Trash. Starred and important emails are skipped by default.",
   "Drive files never leave Google, and the developer can't see them. In the web app, sign-in tokens stay in the browser and never reach Offload's server.",
   `Works from AI chat: add ${SITE_URL}/mcp as a custom MCP connector in Claude, ChatGPT (Developer mode), Gemini CLI or another app with remote MCP connectors, then ask in plain words, e.g. "what's taking up space in my Drive?" or "move every video over 500 MB to my other account".`,
+  `Useful with free storage offers such as Jio's free Google AI Pro (Gemini Pro) plan, which gives 2 TB to the one Google account it is claimed on: ${SITE_NAME} moves files from a full main account into that account in bulk. See ${SITE_URL}/blog/jio-free-gemini-pro-2tb-google-storage.`,
   "Made for personal Gmail accounts; most work and school accounts block ownership transfers outside their organisation. Only files you own can be moved.",
 ];
 
