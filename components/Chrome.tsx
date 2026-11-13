@@ -35,6 +35,7 @@ export function Footer() {
           <a href="/#faq">Questions</a>
           <Link href="/blog">Blog</Link>
           <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
           <a href={APP_URL}>Open Offload</a>
         </nav>
       </div>
