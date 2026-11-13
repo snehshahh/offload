@@ -228,9 +228,10 @@ export default function Home() {
                       <ClaudeMark size={15} /> <b>Claude:</b> Settings &rarr; Connectors &rarr; Add custom connector
                     </li>
                     <li>
-                      <OpenAIMark size={15} /> <b>ChatGPT:</b> turn on Developer mode in Settings, then add a new connector (on plans with custom connectors)
+                      <OpenAIMark size={15} /> <b>ChatGPT:</b> turn on Developer mode in Settings, then create a connector
                     </li>
                   </ul>
+                  <a className="clink" href="#add-connector">Step-by-step for Claude and ChatGPT &darr;</a>
                 </li>
                 <li>
                   Select <b>Connect</b> and sign in with each account: first the one that&rsquo;s full, then the ones that
@@ -265,6 +266,85 @@ export default function Home() {
                 </p>
               </div>
             </div>
+
+            <section id="add-connector" className="connect-guide" aria-labelledby="add-connector-title">
+              <h3 id="add-connector-title">How to add a connector in Claude and ChatGPT</h3>
+              <p className="cg-intro">
+                A connector lets your AI app use another service on your behalf. Offload&rsquo;s connector address is{" "}
+                <code>{`${SITE_URL}/mcp`}</code>. You only add it once: after that it&rsquo;s there in every chat, on the web,
+                desktop and phone apps.
+              </p>
+              <div className="cg-cards">
+                <article className="cg-card">
+                  <h4>
+                    <ClaudeMark size={22} /> Add Offload to Claude
+                  </h4>
+                  <ol className="cg-steps">
+                    <li>
+                      Open <b>claude.ai</b> or the Claude desktop app and go to <b>Settings</b> &rarr; <b>Connectors</b> (in some
+                      versions it&rsquo;s under <b>Customize</b> &rarr; <b>Connectors</b>).
+                    </li>
+                    <li>
+                      Select <b>Add custom connector</b>.
+                    </li>
+                    <li>
+                      Name it <b>Offload</b> and paste <code>{`${SITE_URL}/mcp`}</code> as the remote MCP server URL. Leave the
+                      advanced OAuth fields empty, then select <b>Add</b>.
+                    </li>
+                    <li>
+                      Select <b>Connect</b> next to Offload. A Google sign-in opens: sign in with the account that&rsquo;s full
+                      first, then each account that should receive files, and allow access.
+                    </li>
+                    <li>
+                      In a new chat, open the <b>+</b> (or tools) menu and make sure <b>Offload</b> is switched on. Then ask,
+                      for example, &ldquo;How much space do my Google accounts have?&rdquo;
+                    </li>
+                  </ol>
+                  <p className="cg-note">
+                    <b>Plans:</b> Free accounts can add one custom connector; Pro and Max can add as many as they like. On Team
+                    and Enterprise, an owner adds Offload once in the organization&rsquo;s Connectors settings, and each member
+                    then selects Connect.
+                  </p>
+                </article>
+                <article className="cg-card">
+                  <h4>
+                    <OpenAIMark size={22} /> Add Offload to ChatGPT
+                  </h4>
+                  <ol className="cg-steps">
+                    <li>
+                      Open <b>chatgpt.com</b> and go to <b>Settings</b> &rarr; <b>Apps &amp; Connectors</b> (sometimes just{" "}
+                      <b>Connectors</b> or <b>Apps</b>).
+                    </li>
+                    <li>
+                      Open <b>Advanced settings</b> and switch on <b>Developer mode</b>. On work accounts, an admin may have to
+                      allow it first.
+                    </li>
+                    <li>
+                      Back on the connectors page, select <b>Create</b>. Name it <b>Offload</b>, paste{" "}
+                      <code>{`${SITE_URL}/mcp`}</code> as the MCP server URL, choose <b>OAuth</b> for authentication, tick{" "}
+                      <b>I trust this application</b> and select <b>Create</b>.
+                    </li>
+                    <li>
+                      Sign in with Google when asked: the full account first, then each account that should receive files.
+                    </li>
+                    <li>
+                      In a new chat, select <b>+</b> &rarr; <b>More</b> &rarr; <b>Developer mode</b> and turn on <b>Offload</b>.
+                      Then ask, for example, &ldquo;Move my Videos folder to my other account.&rdquo;
+                    </li>
+                  </ol>
+                  <p className="cg-note">
+                    <b>Plans:</b> custom connectors through Developer mode are on paid plans (Plus, Pro, Business, Enterprise
+                    and Edu), not the free plan. OpenAI moves these menus from time to time; if you can&rsquo;t find Developer
+                    mode, search Settings for &ldquo;Developer&rdquo;.
+                  </p>
+                </article>
+              </div>
+              <p className="cg-foot">
+                Other AI apps that support remote MCP connectors work the same way: add <code>{`${SITE_URL}/mcp`}</code> as a
+                custom connector and sign in with Google. Nothing to install, and you can remove the connector at any time from
+                the same settings page.
+              </p>
+            </section>
           </section>
 
           <section className="block privacy-block" aria-labelledby="privacy-title">

@@ -140,6 +140,22 @@ h3 { font-family:var(--display); font-weight:800; font-size:20px; margin:0 0 6px
 .copyurl { display:flex; align-items:center; gap:8px; margin-top:10px; background:var(--surface); border:1px solid var(--hair); border-radius:12px; padding:6px 6px 6px 14px; max-width:460px; }
 .copyurl code { flex:1; min-width:0; font:14px/1.4 var(--mono); color:var(--ink); overflow-x:auto; white-space:nowrap; scrollbar-width:none; }
 .copyurl .btn { flex:none; padding:8px 14px; font-size:14px; min-width:76px; }
+.clink { display:inline-block; margin-top:8px; font-size:14px; font-weight:600; color:var(--sun-ink); text-decoration:underline; text-underline-offset:3px; }
+.connect-guide { grid-column:1 / -1; scroll-margin-top:24px; min-width:0; }
+.connect-guide h3 { font-family:var(--display); font-size:clamp(22px, 2.6vw, 28px); line-height:1.2; margin:0 0 10px; color:var(--ink); }
+.connect-guide code { font:0.88em/1.4 var(--mono); background:var(--slate-soft); color:var(--ink); padding:1px 5px; border-radius:5px; overflow-wrap:anywhere; }
+.cg-intro, .cg-foot { color:var(--ink-2); margin:0; max-width:72ch; }
+.cg-intro { margin-bottom:22px; }
+.cg-foot { margin-top:20px; font-size:15px; }
+.cg-cards { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.cg-card { min-width:0; background:var(--surface); border:1px solid var(--hair); border-radius:20px; padding:22px 22px 18px; }
+.cg-card h4 { display:flex; align-items:center; gap:10px; margin:0 0 14px; font-family:var(--display); font-size:19px; color:var(--ink); }
+.cg-steps { margin:0; padding-left:22px; display:grid; gap:10px; color:var(--ink-2); font-size:15px; }
+.cg-steps li { padding-left:4px; }
+.cg-steps li::marker { color:var(--sun-ink); font-weight:700; }
+.cg-steps b, .cg-note b { color:var(--ink); }
+.cg-note { margin:16px 0 0; padding:12px 14px; border-radius:12px; background:var(--sun-soft); color:var(--ink-2); font-size:14px; }
+@media (max-width:900px) { .cg-cards { grid-template-columns:1fr; } .cg-card { padding:18px 16px 16px; } }
 .chat { background:var(--surface); border-radius:24px; padding:22px 20px; box-shadow:0 30px 60px -32px rgba(60,46,10,.3); border:1px solid var(--hair); display:flex; flex-direction:column; gap:12px; font-size:15px; }
 .msg { margin:0; max-width:88%; border-radius:16px; padding:11px 15px; line-height:1.5; }
 .msg p { margin:0; }

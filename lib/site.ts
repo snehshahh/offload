@@ -59,6 +59,14 @@ export const FAQS: { q: string; a: string }[] = [
     a: "Yes. Add Offload as a custom connector in Claude, ChatGPT or another AI app that supports MCP connectors, and sign in with your Google accounts: two, or up to five. Then ask in plain words: how much space each account has, where a file is, or to move a folder to another account. It checks with you before moving anything, and the receiving account accepts automatically, so there's nothing to do on that side.",
   },
   {
+    q: "How do I add the Offload connector in Claude?",
+    a: `In Claude, open Settings, then Connectors, and select Add custom connector. Name it Offload, paste ${SITE_URL}/mcp as the remote MCP server URL, and select Add. Then select Connect and sign in with your Google accounts, the full one first. Free Claude accounts can add one custom connector; Pro, Max, Team and Enterprise can add more.`,
+  },
+  {
+    q: "How do I add the Offload connector in ChatGPT?",
+    a: `In ChatGPT, open Settings, then Apps & Connectors, open Advanced settings and switch on Developer mode. Then select Create, name it Offload, paste ${SITE_URL}/mcp as the MCP server URL, choose OAuth, tick I trust this application and select Create. Sign in with your Google accounts, then in a chat choose + then More then Developer mode and turn Offload on. Developer mode is available on paid ChatGPT plans.`,
+  },
+  {
     q: "Does it work with work or school accounts?",
     a: "Usually not. Most organisations block ownership transfers outside their domain. Offload is made for personal Gmail accounts.",
   },
