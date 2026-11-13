@@ -29,15 +29,7 @@ Environment variables:
 | --- | --- |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | The Google OAuth client the web app and the Claude connector sign in with (the secret is only used by the connector). |
 | `MCP_TOKEN_SECRET` | Seals the connector's tokens. See Offload in AI apps below. |
-| `GMAIL_USER`, `GMAIL_APP_PASSWORD` | Send access requests by email through Gmail (see Access requests below). Without them, requests only appear in the Vercel runtime logs. |
-| `ACCESS_REQUEST_TO` | Optional. Who access requests are emailed to; defaults to `GMAIL_USER`. |
 | `NEXT_PUBLIC_SITE_URL` | Optional. The site's public address, for a custom domain. On Vercel, the production address is used automatically. |
-
-## Access requests
-
-While the Google consent screen is in **Testing**, only test users can sign in. So every page shows a "request only" popup after 30 seconds (`components/AccessRequest.tsx`), and the app's sign-in screen has a **Request access** button that opens it straight away; it also opens if a sign-in fails. Visitors enter the Gmail addresses they'll use (up to 5), and `/api/access-request` emails them to `ACCESS_REQUEST_TO` (or `GMAIL_USER`) with a link to Google Cloud's **Audience → Test users** page, with the visitor's address as reply-to. Choosing "No thanks" keeps the popup closed for a week in that browser; after a request it stays closed.
-
-Email goes through Gmail's SMTP server, which is free for a personal Gmail account (about 500 emails a day). Turn on 2-Step Verification for the Gmail account that sends, create an App Password at myaccount.google.com/apppasswords, and add `GMAIL_USER` (that Gmail address) and `GMAIL_APP_PASSWORD` (the 16-character App Password) in Vercel. Every request is also logged as `[access-request]` in Vercel's runtime logs. Once the app is verified by Google, remove `<AccessRequest />` from `app/layout.tsx` and the note in `components/app/OffloadApp.tsx`.
 
 ## The web app: `/app`
 

@@ -20,7 +20,6 @@ import {
   type SizeState,
   type TransferResult,
 } from "@/lib/drive/engine";
-import { openAccessRequest } from "@/components/AccessRequest";
 import { allowGmail, allowScope, hasGmail, hasScope, initBrowserAuth, onReauthNeeded, reauth, signIn, signOut, tokenFor } from "@/lib/drive/browserAuth";
 import { LIBRARY_SCOPE, PICKER_SCOPE, ScopeNeededError } from "@/lib/drive/api";
 import { copyPicked, endPicking, listPicked, MAX_PICK, pollPicking, relayViaSite, startPicking, type CopyProgress, type Picked } from "@/lib/photos/engine";
@@ -121,8 +120,6 @@ export default function OffloadApp({ clientId }: { clientId: string }) {
       }
     } catch (e) {
       setNotice(errText(e));
-      // Accounts that aren't test users yet are turned away by Google, so offer to request access.
-      openAccessRequest();
     } finally {
       setBusy(false);
     }
@@ -278,12 +275,6 @@ export default function OffloadApp({ clientId }: { clientId: string }) {
           <button className="btn btn-main btn-lg" onClick={addAccount} disabled={busy || !clientId}>
             {busy ? "Waiting for Google…" : "Sign in with Google"}
           </button>
-          <p className="oa-request">
-            <b>Request only for now.</b> While Google reviews Offload, only approved accounts can sign in.{" "}
-            <button className="oa-link" onClick={openAccessRequest}>
-              Request access
-            </button>
-          </p>
           <ul className="oa-assure">
             <li>Runs in your browser: files go straight from one Google account to the other</li>
             <li>Nothing is deleted, and you can move things back</li>

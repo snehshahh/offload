@@ -60,11 +60,6 @@ export default function Privacy() {
             only Offload can see, so it can tell you later what moved where.
           </p>
 
-          <p>
-            If you request access to Offload, the Gmail addresses you enter are emailed to the developer so they can add them
-            as approved accounts, and are used for nothing else.
-          </p>
-
           <h2>What passes through this website&rsquo;s server</h2>
           <p>
             For Drive and Gmail, nothing: those happen between your browser and Google. Copying Google Photos is the one exception.
