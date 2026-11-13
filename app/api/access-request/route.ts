@@ -1,13 +1,18 @@
+import nodemailer from "nodemailer";
+
 /**
  * Access requests. While the Google consent screen is in Testing, only accounts added as test users can sign in,
  * so the site asks visitors which Gmail addresses they want to use and emails the owner, who adds them by hand.
  *
- * Email is sent with Resend (https://resend.com): set RESEND_API_KEY in Vercel. Every request is also written to the
- * Vercel runtime logs, so none is lost if email isn't set up yet.
+ * Email is sent through Gmail's SMTP server, from a Gmail account with an App Password: set GMAIL_USER and
+ * GMAIL_APP_PASSWORD in Vercel. Requests go to ACCESS_REQUEST_TO, or to GMAIL_USER itself if that isn't set.
+ * Every request is also written to the Vercel runtime logs, so none is lost if email isn't set up yet.
  */
 
-const TO = process.env.ACCESS_REQUEST_TO || "snehshah7634@gmail.com";
-const FROM = process.env.ACCESS_REQUEST_FROM || "Offload <onboarding@resend.dev>";
+const GMAIL_USER = process.env.GMAIL_USER || "";
+// Google shows App Passwords in groups of four ("abcd efgh ijkl mnop"); the spaces don't belong to it.
+const GMAIL_APP_PASSWORD = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s+/g, "");
+const TO = process.env.ACCESS_REQUEST_TO || GMAIL_USER;
 const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]{2,}$/;
 const MAX_EMAILS = 5;
 
@@ -50,9 +55,8 @@ export async function POST(req: Request) {
   const when = new Date().toISOString();
   console.log("[access-request]", JSON.stringify({ emails, page, when }));
 
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    console.warn("[access-request] RESEND_API_KEY isn’t set, so no email was sent. The request is in this log line.");
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    console.warn("[access-request] GMAIL_USER or GMAIL_APP_PASSWORD isn’t set, so no email was sent. The request is in this log line.");
     return Response.json({ ok: true });
   }
 
@@ -71,23 +75,21 @@ export async function POST(req: Request) {
   ].join("\n");
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: FROM,
-        to: [TO],
-        reply_to: emails[0],
-        subject: `Offload access request: ${emails.join(", ")}`,
-        text,
-      }),
+    const mail = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
     });
-    if (!res.ok) {
-      console.error("[access-request] Resend said", res.status, (await res.text()).slice(0, 500));
-      return Response.json({ ok: false, error: "Couldn’t send your request just now. Try again in a minute." }, { status: 502 });
-    }
+    await mail.sendMail({
+      from: { name: "Offload", address: GMAIL_USER },
+      to: TO,
+      replyTo: emails[0],
+      subject: `Offload access request: ${emails.join(", ")}`,
+      text,
+    });
   } catch (e) {
-    console.error("[access-request] couldn’t reach Resend", e);
+    console.error("[access-request] Gmail wouldn’t send it:", e instanceof Error ? e.message : e);
     return Response.json({ ok: false, error: "Couldn’t send your request just now. Try again in a minute." }, { status: 502 });
   }
   return Response.json({ ok: true });
