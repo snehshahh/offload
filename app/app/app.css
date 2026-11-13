@@ -18,6 +18,8 @@
 .oa-hello h1 { font-size:clamp(34px, 4.6vw, 54px); max-width:16ch; }
 .oa-lede { font-size:19px; color:var(--ink-2); max-width:34em; margin:0 0 28px; }
 .oa-assure { list-style:none; padding:0; margin:28px 0 0; display:grid; gap:10px; color:var(--ink-2); font-size:15px; }
+.oa-request { margin:18px 0 0; max-width:34em; padding:12px 16px; border-radius:12px; background:var(--sun-soft); color:var(--ink-2); font-size:15px; }
+.oa-request .oa-link { margin-left:2px; font-weight:600; }
 .oa-assure li { display:flex; gap:10px; align-items:baseline; }
 .oa-assure li::before { content:""; flex:none; width:12px; height:7px; border-left:2px solid var(--ink); border-bottom:2px solid var(--ink); transform:translateY(-3px) rotate(-45deg); }
 
