@@ -30,7 +30,7 @@ Environment variables:
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | The Google OAuth client the web app and the Claude connector sign in with (the secret is only used by the connector). |
 | `MCP_TOKEN_SECRET` | Seals the connector's tokens. See Offload in AI apps below. |
 | `RESEND_API_KEY` | Sends access requests by email (see Access requests below). Without it, requests only appear in the Vercel runtime logs. |
-| `ACCESS_REQUEST_TO`, `ACCESS_REQUEST_FROM` | Optional. Who access requests are emailed to (default `snehshah7635@gmail.com`) and the sender (default Resend's `onboarding@resend.dev`). |
+| `ACCESS_REQUEST_TO`, `ACCESS_REQUEST_FROM` | Optional. Who access requests are emailed to (default `snehshah7634@gmail.com`) and the sender (default Resend's `onboarding@resend.dev`). |
 | `NEXT_PUBLIC_SITE_URL` | Optional. The site's public address, for a custom domain. On Vercel, the production address is used automatically. |
 
 ## Access requests

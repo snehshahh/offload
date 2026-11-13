@@ -6,7 +6,7 @@
  * Vercel runtime logs, so none is lost if email isn't set up yet.
  */
 
-const TO = process.env.ACCESS_REQUEST_TO || "snehshah7635@gmail.com";
+const TO = process.env.ACCESS_REQUEST_TO || "snehshah7634@gmail.com";
 const FROM = process.env.ACCESS_REQUEST_FROM || "Offload <onboarding@resend.dev>";
 const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]{2,}$/;
 const MAX_EMAILS = 5;
