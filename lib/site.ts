@@ -13,6 +13,12 @@ export const SITE_URL = (() => {
   return "http://localhost:3000";
 })();
 
+/**
+ * When each page's content last changed (YYYY-MM-DD). Used for the sitemap's lastmod and the "Last updated" lines,
+ * so search engines see a date that only moves when the page really changes. Update it when you edit the page.
+ */
+export const PAGE_UPDATED = { home: "2026-11-17", privacy: "2026-11-17", terms: "2026-11-13" } as const;
+
 /** The Offload web app, on this site. Every "Open Offload" button links here. */
 export const APP_URL = "/app";
 

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Header, Footer } from "@/components/Chrome";
 import { PostBody } from "@/components/RichText";
 import { PostCover } from "@/components/PostCover";
-import { POSTS, formatDate, getPost, readingMinutes } from "@/lib/posts";
+import { POSTS, formatDate, getPost, lastChanged, readingMinutes } from "@/lib/posts";
 import { APP_URL, SITE_NAME, SITE_URL } from "@/lib/site";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: post.description,
     keywords: post.keywords,
     alternates: { canonical: url },
-    openGraph: { type: "article", url, title: post.title, description: post.description, publishedTime: post.date },
+    openGraph: { type: "article", url, title: post.title, description: post.description, publishedTime: post.date, modifiedTime: lastChanged(post) },
     twitter: { title: post.title, description: post.description },
   };
 }
@@ -45,7 +45,7 @@ export default async function PostPage({ params }: Props) {
         url,
         mainEntityOfPage: url,
         datePublished: post.date,
-        dateModified: post.date,
+        dateModified: lastChanged(post),
         keywords: post.keywords.join(", "),
         image: `${SITE_URL}/og-image.png`,
         author: { "@type": "Organization", name: SITE_NAME, url: `${SITE_URL}/` },
@@ -84,7 +84,8 @@ export default async function PostPage({ params }: Props) {
               </nav>
               <h1>{post.title}</h1>
               <p className="post-meta">
-                {formatDate(post.date)} · {readingMinutes(post)} min read
+                {formatDate(post.date)}
+                {post.updated && post.updated !== post.date ? ` · Updated ${formatDate(post.updated)}` : ""} · {readingMinutes(post)} min read
               </p>
               <p className="post-lede">{post.description}</p>
               <PostBody blocks={post.body} />

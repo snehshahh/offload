@@ -3,6 +3,22 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  /**
+   * The site moved from offload-five-mu.vercel.app to www.offloadapp.space. Pages on the old address redirect
+   * permanently, so search engines move their index (and links) to the new one instead of seeing two copies.
+   * The connector (/mcp, /oauth, /.well-known), the web app (/app) and its API stay reachable on the old address,
+   * so existing connections and sign-ins keep working.
+   */
+  async redirects() {
+    return [
+      {
+        source: "/:path((?!mcp(?:/|$)|oauth(?:/|$)|\\.well-known(?:/|$)|api(?:/|$)|app(?:/|$)).*)",
+        has: [{ type: "host", value: "offload-five-mu.vercel.app" }],
+        destination: "https://www.offloadapp.space/:path",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

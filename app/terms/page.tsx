@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Header, Footer } from "@/components/Chrome";
+import { formatDate } from "@/lib/posts";
+import { PAGE_UPDATED } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -16,7 +18,7 @@ export default function Terms() {
         <Header />
         <main className="prose">
           <h1>Terms of Service</h1>
-          <p className="fine">Last updated 13 November 2026</p>
+          <p className="fine">Last updated {formatDate(PAGE_UPDATED.terms)}</p>
 
           <p>
             These terms cover your use of Offload: this website, the web app at <Link href="/app">/app</Link>, and the Offload

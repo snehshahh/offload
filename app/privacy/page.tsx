@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Header, Footer } from "@/components/Chrome";
+import { formatDate } from "@/lib/posts";
+import { PAGE_UPDATED } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -15,7 +17,7 @@ export default function Privacy() {
         <Header />
         <main className="prose">
           <h1>Privacy</h1>
-          <p className="fine">Last updated 4 November 2026</p>
+          <p className="fine">Last updated {formatDate(PAGE_UPDATED.privacy)}</p>
 
           <h2>What Offload is</h2>
           <p>

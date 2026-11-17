@@ -20,6 +20,8 @@ export type Post = {
   description: string;
   topic: Topic;
   date: string;
+  /** When the post was last changed in a way readers would notice (YYYY-MM-DD). Leave out if never. */
+  updated?: string;
   keywords: string[];
   body: Block[];
   /** Shown in the big card at the top of /blog. If no post is featured, the newest one is. */
@@ -1655,6 +1657,7 @@ export const POSTS: Post[] = [
       "Google One, Drive’s Storage page, Gmail search and Offload all help with a full account, in different ways. What each one does well, where it stops, and which to use when.",
     topic: "Storage",
     date: "2026-11-04",
+    updated: "2026-11-17",
     keywords: ["Google storage manager", "best Google Drive storage manager", "Google One storage manager alternative", "Google Drive cleanup tool", "free Google storage manager", "Google storage management tools"],
     body: [
       { p: "When your Google account fills up, there are a few places to manage it from. They overlap, but each is built for a different job, and knowing which to reach for saves a lot of time." },
@@ -1700,6 +1703,9 @@ export const POSTS: Post[] = [
 ];
 
 export const TOPICS: Topic[] = ["Storage", "Drive", "AI", "Gmail", "Photos"];
+
+/** The date a post last changed: its update date, or when it was published. */
+export const lastChanged = (p: Post) => p.updated || p.date;
 
 export function getPost(slug: string) {
   return POSTS.find((p) => p.slug === slug);
