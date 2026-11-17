@@ -98,11 +98,20 @@ export default function Privacy() {
             It doesn&rsquo;t send emails and doesn&rsquo;t delete anything.
           </p>
           <p>
+            It can also ask for two optional Google Photos permissions, the same ones as the web app: Google&rsquo;s picker, which
+            shows Offload only the photos and videos you select there, and adding photos to Google Photos, which can&rsquo;t see or
+            change anything already in the library. With them, the assistant can count your photos by month and year, show small
+            previews in the chat, and copy the photos you picked to another linked account. For photos and videos stored in Google
+            Drive, it uses its Drive access to read their dates, sizes and camera details, and shows small previews on request.
+          </p>
+          <p>
             The connector has no database either. The sign-ins for your linked accounts are encrypted and handed to the AI app as part of
             its connection. This website opens them only while it carries out a request, and keeps nothing afterwards. File names,
-            sizes and links pass through it on their way to the AI app, which shows them to you in the chat; that app&rsquo;s own
-            privacy policy (Anthropic&rsquo;s for Claude, OpenAI&rsquo;s for ChatGPT) covers what it does with your conversation.
-            File contents are never read.
+            sizes, dates and links pass through it on their way to the AI app, which shows them to you in the chat, and so do the
+            small photo previews you ask for; that app&rsquo;s own privacy policy (Anthropic&rsquo;s for Claude, OpenAI&rsquo;s for
+            ChatGPT) covers what it does with your conversation. When you copy Google Photos from the AI app, each photo passes
+            through this website in pieces on its way to your other account, as in the web app, without being stored or looked at.
+            Other file contents are never read.
           </p>
 
           <h2>Removing access</h2>

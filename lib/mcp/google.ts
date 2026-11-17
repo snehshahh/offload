@@ -1,5 +1,5 @@
 /** Google sign-in for the AI connector (server side): OAuth code exchange and refresh-token access. */
-import { setTokenSource, type Account } from "@/lib/drive/api";
+import { LIBRARY_SCOPE, PICKER_SCOPE, setTokenSource, type Account } from "@/lib/drive/api";
 
 export type { Account };
 
@@ -7,6 +7,10 @@ export const GOOGLE_SCOPES = [
   "openid",
   "email",
   "https://www.googleapis.com/auth/drive",
+  // Google Photos: see only the photos the person picks in Google's picker, and add copies to Google Photos.
+  // Optional: an account that leaves these unticked still works for Drive.
+  PICKER_SCOPE,
+  LIBRARY_SCOPE,
 ].join(" ");
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -70,7 +74,8 @@ export async function googleExchange(code: string, redirectUri: string): Promise
   const email = emailFromIdToken(body.id_token);
   if (!email) throw new Error("Google didn't share the account's email address.");
   remember(body.refresh_token, body.access_token, body.expires_in);
-  return { e: email, r: body.refresh_token };
+  const ph = (granted.includes(PICKER_SCOPE) ? "p" : "") + (granted.includes(LIBRARY_SCOPE) ? "a" : "");
+  return { e: email, r: body.refresh_token, ...(ph ? { ph } : {}) };
 }
 
 function emailFromIdToken(idToken: unknown): string | null {

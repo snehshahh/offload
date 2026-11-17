@@ -46,7 +46,7 @@ Setup: it uses the same `GOOGLE_CLIENT_ID` as the connector. In Google Cloud, th
 
 ## Offload in AI apps (MCP connector)
 
-The site also serves an MCP server at `/mcp`. Added as a custom connector in Claude, ChatGPT (Developer mode), Gemini CLI or any client that supports remote MCP servers with OAuth, it lets someone ask, in the chat, things like "what's taking up space in my Drive?" or "move every video over 500 MB to my other account", and Claude does the transfer.
+The site also serves an MCP server at `/mcp`. Added as a custom connector in Claude, ChatGPT (Developer mode), Gemini CLI or any client that supports remote MCP servers with OAuth, it lets someone ask, in the chat, things like "what's taking up space in my Drive?", "move every video over 500 MB to my other account" or "show me my photos from 2019 month by month", and Claude does it.
 
 When the connector is added, the person signs in with 2 to 5 Google accounts, first their main account (the one to free up) and then the ones that receive files. Because the connector holds them all, each transfer is requested by the sender and accepted by the receiver in the same step, so nobody has to open the other account. To change the set of accounts, remove the connector in Claude and add it again. Moved items keep their folder structure, and loose ones land in "Transferred from &lt;sender&gt;", just as in the web app.
 
@@ -57,7 +57,14 @@ Tools:
 | `get_accounts` | Every linked account's storage: used, total, free, % used, status (ok / almost full / full) and what's using it, plus totals and which account has the most room. |
 | `find_files` | Finds files or folders and says which account each is in. Without an account it searches all of them, so "where's my wedding video?" just works. Biggest first, by type (images, videos, documents, folders), minimum size, name, or inside a folder. `moved_only` lists what Offload moved into an account. |
 | `folder_size` | Space the files an account owns inside a folder take up, subfolders included. |
+| `photo_timeline` | Every photo and video stored in Google Drive, by year and by month (date taken from the file's camera data, else when it was added): photos, videos, size, video length, cameras, busiest month and year, split by account. Months carry `preview_ids` for `show_photos`. Big libraries run in steps with a `continue_token`. |
+| `pick_google_photos` | Starts a Google Photos picker session for an account and returns a `picker_url` for the person to open, pick (up to 2,000) and press Done, plus a `photos_session`. Google only lets apps see picked photos (the library-wide read scopes were removed in March 2025). |
+| `picked_photos` | The same year and month timeline for the picked Google Photos (no sizes: the Picker API doesn't give them). Says so if the person hasn't pressed Done yet. |
+| `show_photos` | Up to 12 small previews returned as MCP image content, so the assistant can show and describe them: Drive file IDs, or a `photos_session` with an optional `period` (`2019`, `2019-07`) and `offset`. |
+| `copy_google_photos` | Copies the picked Google Photos into another linked account's Google Photos, in an album "Copied from &lt;email&gt;", through the same piece-by-piece relay code as the web app (`lib/photos/relay.ts`, called directly). Runs in steps of about 35 seconds; a big video can stop halfway and carry on. Originals stay put. |
 | `transfer_files` | Moves files and folders (with their contents) from one linked account to another (`from_account`, `to_account`; with two accounts the receiver defaults to the other one). Big jobs run in steps of about 40 seconds and hand back a `continue_token`; Claude keeps calling until `done` is true. Safe to repeat, and reversible by transferring back. |
+
+The photo tools live in `lib/photos/connector.ts`. The Google Photos ones need the two optional Photos permissions on Google's consent screen when the accounts are linked (`photospicker.mediaitems.readonly` and `photoslibrary.appendonly`, the same ones the web app uses); which ones each account granted is kept with its sealed sign-in. Connections made before Google Photos support, or accounts that left those boxes unticked, still work for Drive, and the Photos tools tell the person to reconnect.
 
 Every tool result starts with a `message`: one plain sentence Claude can pass on as it is, such as "Moved 41 files and 2 folders (6.2 GB) from you@gmail.com to archive@gmail.com. Skipped 3 that belong to someone else." or, mid-job, "Still moving: 120 files so far (3.4 GB). Carrying on…". After a move it also says roughly where the sending account's storage should land once Google catches up.
 
@@ -67,7 +74,7 @@ There's no database. The connector is its own OAuth server for Claude (discovery
 
 ### Setup
 
-1. **Google Cloud.** Use the standard Google Cloud project from the Google Photos setup (or any standard project). Enable the **Google Drive API** there. On the consent screen, make sure the `openid`, `email` and `https://www.googleapis.com/auth/drive` scopes are listed, and while it's in testing, add each Google account that will connect as a test user.
+1. **Google Cloud.** Use the standard Google Cloud project from the Google Photos setup (or any standard project). Enable the **Google Drive API** there. On the consent screen, make sure the `openid`, `email` and `https://www.googleapis.com/auth/drive` scopes are listed (plus `photospicker.mediaitems.readonly` and `photoslibrary.appendonly`, with the **Photos Picker API** and **Photos Library API** enabled, for the photo tools), and while it's in testing, add each Google account that will connect as a test user.
 2. **OAuth client.** Under **Clients**, create a **Web application** client (or add to an existing one) with this authorised redirect URI:
 
    ```

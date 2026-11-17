@@ -22,8 +22,12 @@ const SCOPE_NAMES: Record<string, string> = {
 };
 export const scopeName = (s: string) => SCOPE_NAMES[s] || s;
 
-/** A linked Google account: its email, plus a server-side refresh token (empty in the browser). */
-export type Account = { e: string; r: string };
+/**
+ * A linked Google account: its email, plus a server-side refresh token (empty in the browser).
+ * `ph` (connector only) lists the Google Photos permissions the account granted when it was linked:
+ * "p" = the picker (PICKER_SCOPE), "a" = add to Google Photos (LIBRARY_SCOPE). Missing on older connections.
+ */
+export type Account = { e: string; r: string; ph?: string };
 
 /**
  * Returns an access token for `acct` that covers `scope`. `force` means the last one was rejected: get a fresh one.

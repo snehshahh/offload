@@ -4,10 +4,29 @@ import { count, describeFind, findFiles, folderSize, human, listing, storage, tr
 import type { SizeState, TransferState } from "@/lib/drive/engine";
 import { packCursor, unpackCursor } from "./cursor";
 import type { Account } from "./google";
-import "./google"; // registers the server-side Google token source
+import { accessToken } from "./google"; // importing it also registers the server-side Google token source
+import {
+  copyPickedServer,
+  copyResult,
+  drivePreviews,
+  driveTimeline,
+  driveTimelineResult,
+  inPeriod,
+  MAX_PREVIEWS,
+  pickedPreviews,
+  pickedResult,
+  picked,
+  startPick,
+  type CopyState,
+  type DriveTimelineState,
+  type PickToken,
+  type Preview,
+} from "@/lib/photos/connector";
 
 /** How long one transfer_files call works before handing back a continue_token. */
 const TRANSFER_BUDGET_MS = 40_000;
+/** How long one photo_timeline or copy_google_photos call works before handing back a continue_token. */
+const PHOTOS_BUDGET_MS = 35_000;
 
 const INSTRUCTIONS = `Every result starts with "message": a plain summary you can pass on to the person as it is, adding detail from the rest of the result where it helps.
 
@@ -19,7 +38,14 @@ Finding things: call find_files without account to search every linked account a
 
 Moving: get_accounts → find_files / folder_size to pick what to move → confirm with the person, listing what will move, how much space it frees, and which account receives it → transfer_files. With more than two accounts, ask which account should receive the files unless the person said so; get_accounts shows which has the most room. If transfer_files returns done: false, call it again with only continue_token until done is true, and tell the person how far it's got.
 
-Only files the sending account owns can be moved; files owned by anyone else are skipped. Moved items keep their folder structure; loose ones land in "Transferred from <sender>" in the receiving account's My Drive. A transfer can be undone by moving the items back. Nothing is deleted.`;
+Only files the sending account owns can be moved; files owned by anyone else are skipped. Moved items keep their folder structure; loose ones land in "Transferred from <sender>" in the receiving account's My Drive. A transfer can be undone by moving the items back. Nothing is deleted.
+
+Photos come in two kinds, and Google treats them differently:
+- Photos and videos stored in Google Drive: photo_timeline counts all of them, month by month and year by year (count, size, video length, cameras, busiest month and year), and gives preview_ids for each month. If it returns done: false, call it again with only continue_token. Show the years as a small table, then the months the person asks about.
+- The Google Photos library: Google only lets apps see photos the person picks. pick_google_photos returns a picker_url: give it to the person as a link, ask them to choose photos (they can pick up to 2,000) and press Done, and wait for them to say they've finished before calling picked_photos. Don't call picked_photos repeatedly while they're picking. picked_photos gives the same month and year timeline for the picked photos.
+- show_photos shows small previews in the chat: pass Drive file IDs (preview_ids from photo_timeline, or IDs from find_files with kind=media), or a photos_session with an optional period (2019, or 2019-07) for picked Google Photos. Describe what's in them if the person asks.
+- copy_google_photos copies picked Google Photos into another linked account's Google Photos, into an album "Copied from <account>". Confirm first. While done is false, call again with only continue_token. Originals stay put; the person deletes them in Google Photos to free the space. Drive photos are moved with transfer_files instead.
+- If a tool says an account hasn't allowed Google Photos, pass on its message: the person reconnects Offload and leaves the Google Photos boxes ticked.`;
 
 function text(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -35,8 +61,9 @@ export function buildServer(accounts: Account[], site?: string): McpServer {
     {
       name: "offload",
       title: "Offload",
-      version: "1.1.0",
-      description: "Move Google Drive files between your Google accounts and see how much space each one has.",
+      version: "1.2.0",
+      description:
+        "Move Google Drive files between your Google accounts, see how much space each one has, browse your photos month by month and year by year, and copy Google Photos to another account.",
       ...(site
         ? {
             websiteUrl: site,
@@ -231,6 +258,213 @@ export function buildServer(accounts: Account[], site?: string): McpServer {
         const prev = args.continue_token ? unpackCursor<TransferState>(args.continue_token, "transfer") : undefined;
         const { state, ...res } = await transfer(accounts, { ids: args.ids, from, to, state: prev, budgetMs: TRANSFER_BUDGET_MS });
         return text(state ? { ...res, continue_token: packCursor(state) } : res);
+      } catch (e) {
+        return failure(e);
+      }
+    }
+  );
+
+  /* ------------------------------ Photos ------------------------------ */
+
+  const indexOf = (email: string) => accounts.indexOf(find(email));
+  const token = (a: Account, _scope?: string, force?: boolean) => accessToken(a, !!force);
+  const openPick = (t: string) => unpackCursor<PickToken>(t, "pick");
+  const previewContent = (data: object, previews: Preview[]) => ({
+    content: [
+      { type: "text" as const, text: JSON.stringify(data, null, 2) },
+      ...previews.map((p) => ({ type: "image" as const, data: p.data, mimeType: p.mime })),
+    ],
+  });
+
+  server.registerTool(
+    "photo_timeline",
+    {
+      title: "Photo and video timeline (Google Drive)",
+      description:
+        "Counts every photo and video stored in Google Drive, by year and by month (when each was taken, or else added): photos, videos, " +
+        "space used, total video length, the cameras used, the busiest month and year, and a split by account. Leave account out to " +
+        "cover every linked account. With group_by=month, each month comes with preview_ids for show_photos. Big libraries run in steps: " +
+        "while done is false, call again with only continue_token. For the Google Photos library, use pick_google_photos instead.",
+      inputSchema: {
+        account: emailArg("Only this account. Leave out for all of them."),
+        group_by: z.enum(["month", "year"]).default("month").describe("month also includes the year totals."),
+        continue_token: z.string().optional().describe("From a previous call that returned done: false."),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async (args) => {
+      try {
+        const prev = args.continue_token ? unpackCursor<DriveTimelineState & { g: "month" | "year"; ts: number[] }>(args.continue_token, "dtl") : undefined;
+        const targets = prev?.ts || (args.account ? [indexOf(args.account)] : accounts.map((_, i) => i));
+        const group_by = prev?.g || args.group_by;
+        const st = await driveTimeline(accounts, targets, prev, PHOTOS_BUDGET_MS);
+        const res = driveTimelineResult(st, accounts, targets, group_by);
+        return text(res.done ? res : { ...res, continue_token: packCursor({ ...st, g: group_by, ts: targets }) });
+      } catch (e) {
+        return failure(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    "pick_google_photos",
+    {
+      title: "Pick photos from Google Photos",
+      description:
+        "Starts choosing photos from an account's Google Photos library. Google only lets apps see photos the person picks, so this " +
+        "returns a picker_url: give it to the person as a link to open (in a browser signed in to that account), choose photos and videos " +
+        "(up to 2,000) and press Done. Then wait for them to say they're done and call picked_photos with the photos_session.",
+      inputSchema: {
+        account: emailArg(`Whose Google Photos to pick from. Defaults to ${main.e}.`),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    async (args) => {
+      try {
+        const idx = args.account ? indexOf(args.account) : 0;
+        const { token: t, url } = await startPick(accounts, idx);
+        return text({
+          message: `Open this link to choose photos from ${accounts[idx].e}'s Google Photos, then press Done and tell me: ${url}`,
+          picker_url: url,
+          account: accounts[idx].e,
+          photos_session: packCursor(t),
+          note: "Ask the person to say when they've finished picking, then call picked_photos. The link works for a limited time.",
+        });
+      } catch (e) {
+        return failure(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    "picked_photos",
+    {
+      title: "Timeline of picked Google Photos",
+      description:
+        "After the person has picked photos with pick_google_photos: a timeline of what they picked, by year and by month (photos, videos, " +
+        "cameras, busiest month and year). If they haven't pressed Done yet, it says so: ask them to finish rather than calling again straight away.",
+      inputSchema: {
+        photos_session: z.string().describe("From pick_google_photos."),
+        group_by: z.enum(["month", "year"]).default("month"),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async (args) => {
+      try {
+        const t = openPick(args.photos_session);
+        const r = await picked(accounts, t);
+        if (!r.ready) {
+          return text({
+            message: `Nothing picked yet: open the link from pick_google_photos, choose photos in ${accounts[t.a].e}'s Google Photos and press Done, then tell me.`,
+            ready: false,
+          });
+        }
+        return text({ ready: true, ...pickedResult(r.items, accounts, t.a, args.group_by) });
+      } catch (e) {
+        return failure(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    "show_photos",
+    {
+      title: "Show photos",
+      description:
+        `Shows up to ${MAX_PREVIEWS} small previews in the chat, as images you can see and describe. Either pass ids (Drive photos or videos: ` +
+        "preview_ids from photo_timeline, or IDs from find_files with kind=media), or a photos_session from pick_google_photos with an " +
+        "optional period (a year like 2019 or a month like 2019-07). Videos show a still frame.",
+      inputSchema: {
+        ids: z.array(z.string()).max(MAX_PREVIEWS).optional().describe("Drive file IDs."),
+        photos_session: z.string().optional().describe("From pick_google_photos, for picked Google Photos."),
+        period: z
+          .string()
+          .regex(/^\d{4}(-\d{2})?$/)
+          .optional()
+          .describe("With photos_session: only items taken in this year (2019) or month (2019-07)."),
+        limit: z.number().int().min(1).max(MAX_PREVIEWS).default(8),
+        offset: z.number().int().min(0).default(0).describe("With photos_session: skip this many, to see the next ones."),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async (args) => {
+      try {
+        if (args.photos_session) {
+          const t = openPick(args.photos_session);
+          const r = await picked(accounts, t);
+          if (!r.ready) return text({ message: "Nothing picked yet: ask the person to finish picking and press Done.", ready: false });
+          const match = inPeriod(r.items, args.period);
+          const slice = match.slice(args.offset, args.offset + args.limit);
+          const previews = await pickedPreviews(accounts[t.a], slice, token);
+          const shown = args.offset + slice.length;
+          const message = !match.length
+            ? `No picked photos ${args.period ? `from ${args.period}` : ""}.`.replace(" .", ".")
+            : `Showing ${count(previews.length, "preview")} of ${count(match.length, "picked item")}` +
+              (args.period ? ` from ${args.period}` : "") + (shown < match.length ? `; pass offset ${shown} for the next ones.` : ".");
+          return previewContent(
+            {
+              message,
+              previews: previews.map((p, i) => ({ n: i + 1, name: p.name, taken: p.taken, video: p.video })),
+              ...(shown < match.length ? { next_offset: shown } : {}),
+            },
+            previews
+          );
+        }
+        if (!args.ids?.length) throw new Error("Pass ids (Drive file IDs) or a photos_session.");
+        const { previews, missing } = await drivePreviews(accounts, args.ids.slice(0, args.limit), (a) => token(a));
+        const message =
+          `Showing ${count(previews.length, "preview")}.` +
+          (missing.length ? ` ${count(missing.length, "item")} had no preview or couldn't be found.` : "");
+        return previewContent(
+          { message, previews: previews.map((p, i) => ({ n: i + 1, name: p.name, taken: p.taken, account: p.account, video: p.video })) },
+          previews
+        );
+      } catch (e) {
+        return failure(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    "copy_google_photos",
+    {
+      title: "Copy picked Google Photos to another account",
+      description:
+        "Copies the photos and videos picked with pick_google_photos into another linked account's Google Photos, in original quality, " +
+        "into an album \"Copied from <account>\". Google Photos has no ownership transfer, so this is a copy: the originals stay until the " +
+        "person deletes them, and the copies use the receiving account's storage. Confirm with the person first. Big jobs run in steps: " +
+        "while done is false, call again with only continue_token.",
+      inputSchema: {
+        photos_session: z.string().optional().describe("From pick_google_photos. Not needed with continue_token."),
+        to_account: emailArg(
+          two ? "Account that receives the copies. Defaults to the other linked account." : "Account that receives the copies. Required: ask the person if they haven't said."
+        ),
+        continue_token: z.string().optional().describe("From a previous call that returned done: false."),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async (args) => {
+      try {
+        let st: CopyState;
+        if (args.continue_token) st = unpackCursor<CopyState>(args.continue_token, "pcopy");
+        else {
+          if (!args.photos_session) throw new Error("Pass the photos_session from pick_google_photos.");
+          const t = openPick(args.photos_session);
+          let to: number;
+          if (args.to_account) to = indexOf(args.to_account);
+          else if (two) to = t.a === 0 ? 1 : 0;
+          else {
+            const options = accounts.filter((_, i) => i !== t.a).map((x) => x.e).join(", ");
+            throw new Error(`Which account should receive the copies? Pass to_account: one of ${options}. get_accounts shows which has the most room.`);
+          }
+          if (to === t.a) throw new Error("Pick a different account to copy to: that's the one the photos are in.");
+          const r = await picked(accounts, t);
+          if (!r.ready) return text({ message: "Nothing picked yet: ask the person to finish picking and press Done.", done: false });
+          st = { k: "pcopy", a: t.a, to, id: t.id, next: 0, open: [], album: null, total: r.items.length, copied: 0, failed: 0, bytes: 0, errors: [] };
+        }
+        const { done, message } = await copyPickedServer(accounts, st, PHOTOS_BUDGET_MS, token);
+        const res = copyResult(st, accounts, done, message);
+        return text(done ? res : { ...res, continue_token: packCursor(st) });
       } catch (e) {
         return failure(e);
       }

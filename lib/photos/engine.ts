@@ -34,7 +34,18 @@ export async function pollPicking(acct: Account, id: string) {
   return { ready: !!s.mediaItemsSet, pollMs: durMs(s.pollingConfig?.pollInterval, 4000) };
 }
 
-export type Picked = { id: string; name: string; mime: string; video: boolean; url: string };
+export type Picked = {
+  id: string;
+  name: string;
+  mime: string;
+  video: boolean;
+  url: string;
+  /** When it was taken (Google's createTime), ISO 8601. */
+  time?: string;
+  width?: number;
+  height?: number;
+  camera?: string;
+};
 
 /** Everything picked in the session, with fresh download links. */
 export async function listPicked(acct: Account, id: string): Promise<Picked[]> {
@@ -44,7 +55,18 @@ export async function listPicked(acct: Account, id: string): Promise<Picked[]> {
     const res = await callGoogle(PICKER, PICKER_SCOPE, acct, "GET", "mediaItems", { sessionId: id, pageSize: 100, pageToken });
     for (const m of res.mediaItems || []) {
       const f = m.mediaFile || {};
-      out.push({ id: m.id, name: f.filename || m.id, mime: f.mimeType || "application/octet-stream", video: m.type === "VIDEO", url: f.baseUrl });
+      const meta = f.mediaFileMetadata || {};
+      const camera = [meta.cameraMake, meta.cameraModel].filter(Boolean).join(" ").trim();
+      out.push({
+        id: m.id,
+        name: f.filename || m.id,
+        mime: f.mimeType || "application/octet-stream",
+        video: m.type === "VIDEO",
+        url: f.baseUrl,
+        ...(m.createTime ? { time: String(m.createTime) } : {}),
+        ...(meta.width ? { width: Number(meta.width), height: Number(meta.height || 0) } : {}),
+        ...(camera ? { camera } : {}),
+      });
     }
     pageToken = res.nextPageToken;
   } while (pageToken);

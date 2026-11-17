@@ -1683,7 +1683,7 @@ export const POSTS: Post[] = [
         "**Moves instead of deletes:** whole folders, everything over a size or a hand-picked set go to another account in bulk, and the receiving account accepts automatically. Nothing is lost.",
         "**Ask in plain words:** in ChatGPT or Claude, ask what’s using space, where a file is, or what a move would free, and it does the move when you say yes.",
         "**Gmail in bulk:** quick filters with a live count, trashed in one go, with starred and important mail left alone. ([App only.](/blog/delete-all-promotions-gmail))",
-        "**Google Photos:** copied to another account into an album, then you delete the originals. ([App only.](/blog/move-google-photos-to-another-account))",
+        "**Google Photos:** copied to another account into an album, then you delete the originals. In ChatGPT or Claude it can also lay out your photos month by month and year by year, and show previews. ([How copying works.](/blog/move-google-photos-to-another-account))",
         "**Where it stops:** it doesn’t sell storage, and moving needs a second personal account to move to. Work and school accounts usually block transfers.",
       ] },
       { h2: "Which to use when" },
