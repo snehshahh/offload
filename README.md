@@ -2,6 +2,8 @@
 
 Move Google Drive files to your other Google account, and free up storage on the first one.
 
+Live at **https://www.offloadapp.space** (the bare `offloadapp.space` redirects there). The connector is at `https://www.offloadapp.space/mcp`.
+
 Pick whole folders, your largest files, or photos and videos, and hand them over in bulk. Photos that live in Google Photos can be copied across too, and Gmail cleanup finds emails in bulk and moves them to Trash. You sign in with all your accounts (up to five), so the receiving account accepts each transfer straight away. The app runs in the browser at `/app` and talks to Google directly; there's no database. It also works from chat, as a Claude connector.
 
 ## What's here
@@ -29,7 +31,7 @@ Environment variables:
 | --- | --- |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | The Google OAuth client the web app and the Claude connector sign in with (the secret is only used by the connector). |
 | `MCP_TOKEN_SECRET` | Seals the connector's tokens. See Offload in AI apps below. |
-| `NEXT_PUBLIC_SITE_URL` | Optional. The site's public address, for a custom domain. On Vercel, the production address is used automatically. |
+| `NEXT_PUBLIC_SITE_URL` | The site's public address, used for canonical links, the sitemap, share previews and `llms.txt`. Set to `https://www.offloadapp.space` in production on Vercel. Without it, Vercel's production address is used. It's read at build time, so redeploy after changing it. |
 
 ## The web app: `/app`
 
@@ -42,7 +44,7 @@ It runs in the browser: Google Identity Services gives it a short-lived token fo
 - **Gmail cleanup** (`lib/gmail/engine.ts`): quick filters (Promotions, Social, Updates, bigger than 10 MB, has attachments, older than a year) plus "Has the words", "Subject contains" and "From", a live count and the newest 20 matches, a two-click confirm, and trashing in slices that never go past the confirmed number and skip conversations already handled. It asks for Gmail permission only when the tab is opened, per account, with the narrower `gmail.modify` scope (search and Trash; it can't delete for good), and reads only the subject, sender and date of the matches it shows.
 - **Google Photos** (`lib/photos/`): Google Photos has no ownership transfer, so it copies. The source account picks in Google's own picker (`photospicker.mediaitems.readonly`), each item is copied in 16 MB pieces into the receiving account's Google Photos (`photoslibrary.appendonly`), and they're gathered in an album "Copied from <email>"; originals stay put. Picking, the album and `batchCreate` run in the browser. The bytes go through `/api/photos/copy` (`lib/photos/relay.ts`), because browsers can't read the `Content-Range` and `X-Goog-Upload-URL` headers piece-by-piece copying needs: each call downloads one piece from the source and hands it to the receiver's resumable upload, stores nothing, only talks to `*.googleusercontent.com` and `photoslibrary.googleapis.com`, and refuses calls from other sites. Expired download links and sign-ins are refreshed once and retried; a file Google won't send in pieces can be copied up to 100 MB. That traffic counts towards the Vercel project's data transfer.
 
-Setup: it uses the same `GOOGLE_CLIENT_ID` as the connector. In Google Cloud, that client needs your site under **Authorised JavaScript origins** (e.g. `https://offload-five-mu.vercel.app`), the **Gmail API**, **Photos Picker API** and **Photos Library API** must be enabled, `https://www.googleapis.com/auth/gmail.modify`, `photospicker.mediaitems.readonly` and `photoslibrary.appendonly` must be on the consent screen's **Data Access** list, and every account that signs in must be a test user while the consent screen is in Testing.
+Setup: it uses the same `GOOGLE_CLIENT_ID` as the connector. In Google Cloud, that client needs your site under **Authorised JavaScript origins** (`https://www.offloadapp.space`, plus `https://offload-five-mu.vercel.app` while the old address is still in use), the **Gmail API**, **Photos Picker API** and **Photos Library API** must be enabled, `https://www.googleapis.com/auth/gmail.modify`, `photospicker.mediaitems.readonly` and `photoslibrary.appendonly` must be on the consent screen's **Data Access** list, and every account that signs in must be a test user while the consent screen is in Testing.
 
 ## Offload in AI apps (MCP connector)
 
