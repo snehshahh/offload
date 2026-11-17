@@ -3,6 +3,9 @@ import { HeroDemo } from "@/components/HeroDemo";
 import { GmailDemo } from "@/components/GmailDemo";
 import { CopyUrl } from "@/components/CopyUrl";
 import { ClaudeMark, OpenAIMark, WorksWith } from "@/components/BrandMarks";
+import { HeroBackdrop, HeroFloaters, StepArt, PrivacyArt, BandArt } from "@/components/Illustrations";
+import { Ribbon } from "@/components/Ribbon";
+import { ScrollFx } from "@/components/ScrollFx";
 import { APP_URL, FAQS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const jsonLd = {
@@ -104,11 +107,13 @@ export default function Home() {
   return (
     <div className="site">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <ScrollFx />
       <div className="wrap">
         <Header />
 
         <main>
           <section className="hero" aria-labelledby="hero-title">
+            <HeroBackdrop />
             <div className="hero-copy">
               <a className="news" href="#claude">
                 <span className="news-tag">New</span>
@@ -138,20 +143,29 @@ export default function Home() {
                 <li>Files never leave Google</li>
               </ul>
             </div>
-            <HeroDemo />
+            <div className="hero-art">
+              <HeroFloaters />
+              <HeroDemo />
+            </div>
           </section>
 
+          <Ribbon />
+
           <section id="how" className="block" aria-labelledby="how-title">
-            <h2 id="how-title">How it works</h2>
+            <p className="kicker" data-reveal>Three steps, no installs</p>
+            <h2 id="how-title" data-reveal>How it works</h2>
             <ol className="steps">
               {STEPS.map((s, i) => (
-                <li key={s.title}>
-                  <span className="n" aria-hidden="true">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <h3>{s.title}</h3>
-                    <p>{s.body}</p>
+                <li key={s.title} data-reveal style={{ "--d": i } as React.CSSProperties}>
+                  <StepArt step={i} />
+                  <div className="step-body">
+                    <span className="n" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <h3>{s.title}</h3>
+                      <p>{s.body}</p>
+                    </div>
                   </div>
                 </li>
               ))}
@@ -159,10 +173,10 @@ export default function Home() {
           </section>
 
           <section className="block" aria-labelledby="what-title">
-            <h2 id="what-title">One <span className="nowrap">AI-powered</span> tool to manage your Google storage</h2>
+            <h2 id="what-title" data-reveal>One <span className="nowrap">AI-powered</span> tool to manage your Google storage</h2>
             <div className="features">
-              {FEATURES.map((f) => (
-                <div className="feat" key={f.title}>
+              {FEATURES.map((f, i) => (
+                <div className="feat" key={f.title} data-reveal style={{ "--d": i % 3 } as React.CSSProperties}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d={f.icon} />
                   </svg>
@@ -170,6 +184,35 @@ export default function Home() {
                   <p>{f.body}</p>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="stats" aria-label="Offload in numbers">
+            <div className="stat" data-reveal>
+              <b>
+                <span data-count="5">5</span>
+              </b>
+              <span>Google accounts in one place</span>
+            </div>
+            <div className="stat" data-reveal style={{ "--d": 1 } as React.CSSProperties}>
+              <b>
+                <span data-count="75">75</span>
+                <small>GB</small>
+              </b>
+              <span>of free Google storage across five accounts</span>
+            </div>
+            <div className="stat" data-reveal style={{ "--d": 2 } as React.CSSProperties}>
+              <b>
+                <span data-count="0">0</span>
+              </b>
+              <span>of your files stored by Offload</span>
+            </div>
+            <div className="stat" data-reveal style={{ "--d": 3 } as React.CSSProperties}>
+              <b>
+                <span data-count="30">30</span>
+                <small>days</small>
+              </b>
+              <span>to restore any email you trash</span>
             </div>
           </section>
 
@@ -195,7 +238,9 @@ export default function Home() {
                 </li>
               </ul>
             </div>
-            <GmailDemo />
+            <div data-reveal className="demo-lift">
+              <GmailDemo />
+            </div>
           </section>
 
           <section id="claude" className="block claude-block" aria-labelledby="claude-title">
@@ -241,8 +286,8 @@ export default function Home() {
               </ol>
             </div>
             <div className="chat" aria-label="Example conversation with an AI assistant">
-              <p className="msg you">What&rsquo;s eating my storage? I&rsquo;m out of space on my main account.</p>
-              <div className="msg claude">
+              <p className="msg you" data-reveal style={{ "--d": 0 } as React.CSSProperties}>What&rsquo;s eating my storage? I&rsquo;m out of space on my main account.</p>
+              <div className="msg claude" data-reveal style={{ "--d": 1 } as React.CSSProperties}>
                 <span className="tool">Offload &middot; get_accounts, find_files</span>
                 <p>
                   <b>you@gmail.com</b> is at 14.6 of 15 GB. The biggest things are in <b>Videos/2023</b> (6.2 GB, 41 files) and
@@ -250,16 +295,16 @@ export default function Home() {
                   free. Want me to move Videos/2023 there?
                 </p>
               </div>
-              <p className="msg you">Yes, move the folder.</p>
-              <div className="msg claude">
+              <p className="msg you" data-reveal style={{ "--d": 2 } as React.CSSProperties}>Yes, move the folder.</p>
+              <div className="msg claude" data-reveal style={{ "--d": 3 } as React.CSSProperties}>
                 <span className="tool">Offload &middot; transfer_files</span>
                 <p>
                   Done: 41 files moved, <b>6.2 GB freed</b>. They&rsquo;re in &ldquo;Transferred from you@gmail.com&rdquo; in
                   your archive account, with the folder kept as it was.
                 </p>
               </div>
-              <p className="msg you">Where&rsquo;s my wedding video now?</p>
-              <div className="msg claude">
+              <p className="msg you" data-reveal style={{ "--d": 4 } as React.CSSProperties}>Where&rsquo;s my wedding video now?</p>
+              <div className="msg claude" data-reveal style={{ "--d": 5 } as React.CSSProperties}>
                 <span className="tool">Offload &middot; find_files</span>
                 <p>
                   In <b>you.archive@gmail.com</b>, inside Videos/2023. It moved there today from your main account.
@@ -356,6 +401,7 @@ export default function Home() {
                 happens inside Google too. Only Google Photos copies pass through Offload&rsquo;s server, in pieces, without
                 being stored.
               </p>
+              <PrivacyArt />
             </div>
             <ul className="trust">
               <li>
@@ -391,7 +437,8 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="band" aria-labelledby="band-title">
+          <section className="band" aria-labelledby="band-title" data-reveal>
+            <BandArt />
             <div>
               <h2 id="band-title">Free up your Google storage today</h2>
               <p>A free, <span className="nowrap">AI-powered</span> storage manager for your Google accounts. A few clicks or one question, and the &ldquo;storage full&rdquo; warning is gone.</p>
